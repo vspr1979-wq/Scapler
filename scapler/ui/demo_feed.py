@@ -4,7 +4,11 @@
 synthetic ticks (same fixtures the unit tests use) and a stub broker that
 fills locally. The UI shows a permanent red "DEMO — SYNTHETIC DATA · STUB
 BROKER · NO REAL ORDERS" banner whenever ``demo=True``. Recorded real-tick
-replay (plan §0.3) is a separate, Phase-6 recorder concern.
+replay (plan §0.3) is a separate, recorder-based concern.
+
+All FIVE indices are streamed simultaneously (spots + ATM±2 option quotes
+each) so the instant index switch — user directive, Phase 6 — has live data
+waiting for every dropdown entry, exactly like a real feed subscription.
 """
 from __future__ import annotations
 
@@ -14,27 +18,35 @@ import time
 from ..brokers.base import InstrumentMeta, MasterTable, OrderAck
 from ..core.messages import InstrumentKey, OptionType, Tick
 
-INDEX = "BANKNIFTY"
 EXPIRY = "2026-09-29"
-CENTER = 51200.0
-STEP = 100.0
-LOT = 30
+
+#        name          exch    center    step   lot  abbr
+INDICES = (
+    ("NIFTY",       "NSE",  24500.0,   50.0,  65, "N"),
+    ("SENSEX",      "BSE",  80100.0,  100.0,  20, "S"),
+    ("BANKNIFTY",   "NSE",  51200.0,  100.0,  30, "B"),
+    ("FINNIFTY",    "NSE",  24050.0,   50.0,  60, "F"),
+    ("MIDCPNIFTY",  "NSE",  11820.0,   25.0, 120, "M"),
+)
 
 
-def demo_master() -> MasterTable:
-    options = {}
+def demo_master(radius: int = 10) -> MasterTable:
+    options: dict[str, InstrumentMeta] = {}
+    indices: dict[str, str] = {}
     y, m, d = EXPIRY[2:4], EXPIRY[5:7], EXPIRY[8:10]
-    for i in range(-10, 11):
-        strike = CENTER + i * STEP
-        for opt in OptionType:
-            c = "C" if opt is OptionType.CE else "P"
-            ik = InstrumentKey(exchange="NSE_FO", token=f"{int(strike)}{c}",
-                               symbol=f"{INDEX}{y}{m}{d}{c}{int(strike)}",
-                               strike=strike, expiry=EXPIRY, option_type=opt)
-            options[ik.feed_key] = InstrumentMeta(
-                instrument=ik, lot_size=LOT, index_symbol=INDEX,
-                expiry=EXPIRY)
-    indices = {INDEX: f"NSE_INDEX|{INDEX}"}
+    for name, exch, center, step, lot, abbr in INDICES:
+        indices[name] = f"{exch}_INDEX|{name}"
+        for i in range(-radius, radius + 1):
+            strike = center + i * step
+            for opt in OptionType:
+                c = "C" if opt is OptionType.CE else "P"
+                ik = InstrumentKey(
+                    exchange=f"{exch}_FO", token=f"{abbr}{int(strike)}{c}",
+                    symbol=f"{name}{y}{m}{d}{c}{int(strike)}",
+                    strike=strike, expiry=EXPIRY, option_type=opt)
+                options[ik.feed_key] = InstrumentMeta(
+                    instrument=ik, lot_size=lot, index_symbol=name,
+                    expiry=EXPIRY)
     return MasterTable(options=options, indices=indices, source="demo")
 
 
@@ -59,69 +71,73 @@ def _t0() -> int:
 
 
 def demo_stream(min_t0: int = 0) -> list[Tick]:
-    """One scripted 60-minute demo day on a future minute grid.
+    """One scripted 60-minute demo day on a future minute grid, all indices.
 
-    0-29 up-leg → CE signal on a volume-spike candle → ladder exit (T1 ✓ →
-    trail SL=BE → T2 ✓ → T3 flat); 30-59 pullback → setup BREAK → FSM
-    disarms/re-arms (no-spam rule visible); next cycle signals again.
-    Spot mean-reverts around the ATM (window never drifts into unfed
-    strikes); ATM±2 strikes are quoted with moneyness-shaped premiums and
-    deltas so the delta-band picker has a real choice. Volume spikes every
-    4th bar gate the setup exactly like the real rule. Grid is always in the
-    future and chained across cycles so the candle wall-clock flush never
-    races and no tick is ever "late".
+    Each index runs an up-leg/pullback cycle (phase-staggered by 6 minutes
+    so the five FSMs sit in different states — switching index instantly
+    shows a different picture). Volume spikes every 4th bar gate the setup;
+    spot mean-reverts to its center so windows stay inside the fed strikes;
+    premium tracks moneyness with delta/gamma for the delta-band picker.
+    Grid is chained across cycles — never "late" for the candle builder.
     """
     T0 = max(_t0(), min_t0)
     T0 = (T0 // 60) * 60
-    SK = f"NSE_INDEX|{INDEX}"
-    strikes = [CENTER + j * STEP for j in range(-2, 3)]
     ticks: list[Tick] = []
-    px, cum = CENTER - 150.0, 5000.0
-
-    def phase_ch(i: int) -> float:
-        if i < 30:                              # up-leg
-            return 25.0 if i % 2 == 0 else -10.0
-        return -20.0 if i % 2 == 0 else 8.0     # pullback (setup break)
+    state = {name: center - 150.0
+             for name, _, center, _, _, _ in INDICES}
+    cum = {name: 5000.0 for name, *_ in INDICES}
 
     for i in range(60):
         base = T0 + i * 60
-        ch = phase_ch(i)
-        px = px * 0.95 + CENTER * 0.05          # keep cycles bounded
-        o = px
-        c = px + ch
-        wick = 5.0
-        h, l = max(o, c) + wick, min(o, c) - wick
-        v = 900.0 if i % 4 == 3 else 300.0      # volume spike gates the setup
-        for sec, ltp, frac in ((1, o, 0.0), (20, h, 1 / 3),
-                               (40, l, 1 / 3), (55, c, 1 / 3)):
-            cum += frac * v
-            ticks.append(Tick(key=SK, exch_ts_ns=(base + sec) * 10**9,
-                              ltp=ltp, volume=cum))
-        for j, strike in enumerate(strikes):
-            for side, sign in (("C", 1.0), ("P", -1.0)):
-                m = (c - strike) * sign                     # moneyness
-                prem = max(3.0, 148.2 + m * 0.7 - abs(j) * 45.0)
-                d = min(0.95, max(0.05, 0.53 + m * 0.004)) * sign
-                g = max(0.0005, 0.0045 - abs(j) * 0.0008)
-                key = f"NSE_FO|{int(strike)}{side}"
-                ticks.append(Tick(key=key,
-                                  exch_ts_ns=(base + 56 + j) * 10**9,
-                                  ltp=prem, bid=prem - 0.05, ask=prem + 0.05,
-                                  delta=d, gamma=g))
-        px = c
-    ticks.append(Tick(key=SK, exch_ts_ns=(T0 + 60 * 60 + 1) * 10**9,
-                      ltp=px, volume=cum))
+        for k, (name, exch, center, step, lot, abbr) in enumerate(INDICES):
+            off = k * 6                          # phase stagger per index
+            j = (i + off) % 60
+            if j < 30:                           # up-leg
+                ch = 25.0 if j % 2 == 0 else -10.0
+            else:                                # pullback (setup break)
+                ch = -20.0 if j % 2 == 0 else 8.0
+            px = state[name] * 0.95 + center * 0.05
+            o = px
+            c = px + ch
+            wick = 5.0
+            h, l = max(o, c) + wick, min(o, c) - wick
+            v = 900.0 if j % 4 == 3 else 300.0
+            SK = f"{exch}_INDEX|{name}"
+            for sec, ltp, frac in ((1, o, 0.0), (20, h, 1 / 3),
+                                   (40, l, 1 / 3), (55, c, 1 / 3)):
+                cum[name] += frac * v
+                ticks.append(Tick(key=SK, exch_ts_ns=(base + sec) * 10**9,
+                                  ltp=ltp, volume=cum[name]))
+            for jj in range(-2, 3):
+                strike = center + jj * step
+                for side, sign in (("C", 1.0), ("P", -1.0)):
+                    mny = (c - strike) * sign
+                    prem = max(3.0, 148.2 + mny * 0.7 - abs(jj) * 45.0)
+                    dl = min(0.95, max(0.05, 0.53 + mny * 0.004)) * sign
+                    g = max(0.0005, 0.0045 - abs(jj) * 0.0008)
+                    key = f"{exch}_FO|{abbr}{int(strike)}{side}"
+                    ticks.append(Tick(
+                        key=key, exch_ts_ns=(base + 50 + jj * 2 +
+                                             (1 if sign < 0 else 0)) * 10**9,
+                        ltp=prem, bid=prem - 0.05, ask=prem + 0.05,
+                        delta=dl, gamma=g))
+            state[name] = c
+    for name, exch, *_ in INDICES:
+        ticks.append(Tick(key=f"{exch}_INDEX|{name}",
+                          exch_ts_ns=(T0 + 60 * 60 + 1) * 10**9,
+                          ltp=state[name], volume=cum[name]))
     return ticks
 
 
 class DemoFeedHandle:
     """Paced async iterator over demo_stream(); loops forever.
 
-    30 ms pacing ≈ one 60-minute demo day every ~9 s, slow enough for the
-    bus coalescer and for a human to watch the ladder work.
+    8 ms pacing ≈ one 60-minute demo day (all five indices, 4200+ ticks)
+    every ~35 s — slow enough for the bus coalescer and for a human to
+    watch the ladder work.
     """
 
-    def __init__(self, pace_s: float = 0.015, cycle_pause_s: float = 2.0):
+    def __init__(self, pace_s: float = 0.008, cycle_pause_s: float = 2.0):
         self.pace_s = pace_s
         self.cycle_pause_s = cycle_pause_s
         self._t: list[Tick] = []

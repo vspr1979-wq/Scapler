@@ -77,9 +77,14 @@ class PositionExitAgent(Agent):
                             self._exit_requests(key, tr, [act])
             return
         if t == Topic.KILL_SWITCH:
+            # watchdog square-off books as SQUARE_OFF; manual/other kills as
+            # KILL — the journal and journal-tab reasons stay distinguishable
+            reason = ExitReason.SQUARE_OFF \
+                if getattr(env.payload, "source", "") == "watchdog" \
+                else ExitReason.KILL
             for key, tr in list(self.trackers.items()):
                 ltp = getattr(self, "_ltp", {}).get(key, tr.avg)
-                act = tr.force_close(ExitReason.KILL, ltp)
+                act = tr.force_close(reason, ltp)
                 if act:
                     self._exit_requests(key, tr, [act])
             return

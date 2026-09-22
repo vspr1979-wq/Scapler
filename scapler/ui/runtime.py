@@ -1,25 +1,34 @@
-"""ScaplerRuntime — builds bus + agents + UI for one trading session.
+"""ScaplerRuntime — builds bus + all 13 agents + UI for one trading session.
 
-Two entry points:
-  * ``run_desktop()`` — Windows: pywebview/WebView2 window, js_api commands,
-    evaluate_js snapshots (plan §7). No HTTP server.
-  * ``run_dev()`` — development/preview: aiohttp serves the SAME frontend
-    plus a WebSocket snapshot stream; only for operator machines/sandbox,
-    never part of the packaged desktop path.
+Phase 6 wiring:
+  * journal (SQLite WAL under ``data_dir``) and watchdog (stale-feed
+    reconnect, square-off, orphan policy) join the stack — 13 agents total
+    once the supervisor and UI are counted with the 8 trading agents and
+    the connection agent.
+  * ``set_index`` is INSTANT (user directive): the dropdown hot-switches
+    candle/signal/strike/UI bindings and reconnects the feed against the
+    memory-cached master; the choice persists to settings.json (disk).
+    Switching is refused while a position is open.
+  * broker connect = secrets (DPAPI store) → ConnectionAgent.login →
+    master via memory→disk→network cache → live adapter hot-swap
+    (refused while a position is open; one active broker).
 
-Live mode requires a broker adapter (Phase 1/2 classes) + credentials; until
-packaging (Phase 6) the runnable configuration is ``demo=True``: synthetic
-labelled fixtures + DemoBroker (no real orders possible).
+Entry points: ``run_desktop()`` (pywebview/WebView2, Windows) and
+``run_dev()`` (aiohttp preview server; demo mode only until credentials
+are saved through the Settings tab).
 """
 from __future__ import annotations
 
 import asyncio
 import dataclasses
 import logging
+from datetime import date
 from pathlib import Path
 
 from ..agents.candle import CandleBuilderAgent
+from ..agents.connection import ConnectionAgent
 from ..agents.indicator import IndicatorAgent
+from ..agents.journal import JournalAgent
 from ..agents.market_data import MarketDataAgent
 from ..agents.order import OrderAgent
 from ..agents.position_exit import PositionExitAgent
@@ -28,9 +37,11 @@ from ..agents.signal import SignalAgent
 from ..agents.strike import StrikeAgent
 from ..agents.supervisor import SupervisorAgent
 from ..agents.ui import UIAgent
+from ..agents.watchdog import WatchdogAgent
 from ..core import config as config_mod
 from ..core.config import Settings
 from ..core.messages import Topic
+from ..core.secrets_store import SecretStore
 from .demo_feed import DemoAdapter, DemoBroker, demo_master
 
 log = logging.getLogger(__name__)
@@ -44,10 +55,11 @@ class ScaplerRuntime:
         self.cfg = settings or Settings()
         self.demo = demo
         self.settings_path = Path(settings_path) if settings_path else None
+        self.data_dir = Path(self.cfg.data_dir).expanduser()
         self.bus = None
         self.agents: list = []
         self.ui: UIAgent | None = None
-        self.secret_note = "secrets live in memory only (DPAPI store: Phase 6)"
+        self.store = SecretStore(self.data_dir)
 
         if demo:
             # demo days cycle continuously → lift the daily-trade breaker so
@@ -58,26 +70,57 @@ class ScaplerRuntime:
             self.broker = DemoBroker(self.master)
             self.broker_name = "DEMO (stub)"
         else:
-            raise RuntimeError(
-                "live broker wiring (credentials + adapters) lands with "
-                "Phase 6 packaging; run with demo=True for now")
-        self.index = self.cfg.index if self.cfg.index in self.master.indices \
+            from ..brokers.base import MasterTable
+            # empty placeholder until ConnectionAgent delivers the real
+            # master (memory→disk→network cache) on broker connect
+            self.master = MasterTable(options={}, indices={},
+                                      source="awaiting-connection")
+            self.adapter = _NullAdapter()
+            self.broker = _NullBroker()
+            self.broker_name = "no broker"
+        self.index = self._resolve_index(self.cfg.index)
+        self.spot_key = self.master.indices[self.index] if self.master else ""
+        self.expiry = self._nearest_expiry(self.index)
+
+    # ── helpers ─────────────────────────────────────────────────────
+    def _resolve_index(self, want: str) -> str:
+        if not self.master or not self.master.indices:
+            return want
+        return want if want in self.master.indices \
             else next(iter(self.master.indices))
-        self.spot_key = self.master.indices[self.index]
-        self.expiry = self.master.nearest_expiry(self.index, "2026-09-22") \
+
+    def _nearest_expiry(self, index: str) -> str:
+        if not self.master or not self.master.indices:
+            return ""
+        return self.master.nearest_expiry(index, date.today().isoformat()) \
             or ""
+
+    def _lot_of(self, index: str) -> int:
+        if not self.master:
+            return 0
+        lots = {m.lot_size for m in self.master.options.values()
+                if m.index_symbol == index}
+        return min(lots) if lots else 0
+
+    def _open_position(self) -> bool:
+        px = getattr(self, "px", None)
+        return bool(px is not None and px.trackers)
+
+    def _persist(self) -> None:
+        if self.settings_path:
+            config_mod.save(self.cfg, self.settings_path)
 
     # ── command callbacks (UI → runtime) ────────────────────────────
     def _commands(self) -> dict:
         return {
             "set_mode": self.cmd_set_mode,
             "set_lots": self.cmd_set_lots,
+            "set_index": self.cmd_set_index,
             "save_settings": self.cmd_save_settings,
-            "broker_connect": lambda a: {
-                "ok": False,
-                "error": "live broker connect: Phase 6 (demo mode)"},
-            "broker_disconnect": lambda a: {"ok": True},
-            "broker_save": lambda a: {"ok": True, "note": self.secret_note},
+            "broker_save": self.cmd_broker_save,
+            "broker_connect": self.cmd_broker_connect,
+            "broker_disconnect": self.cmd_broker_disconnect,
+            "journal_export": self.cmd_journal_export,
         }
 
     def _replace_cfg(self, **kw) -> None:
@@ -91,66 +134,153 @@ class ScaplerRuntime:
         if mode not in ("AUTO", "MANUAL"):
             return {"ok": False, "error": "mode must be AUTO|MANUAL"}
         self._replace_cfg(mode=mode)
-        sig = next((a for a in self.agents if a.name == "signal"), None)
-        if sig is not None:
-            sig.set_mode(mode)
+        self.sa.set_mode(mode)
+        self._persist()
         return {"ok": True}
 
     def cmd_set_lots(self, args: dict) -> dict:
         n = max(1, min(10, int(args.get("lots", 1))))
         self._replace_cfg(lot_multiplier=n)
+        self._persist()
         return {"ok": True}
 
     def cmd_set_index(self, args: dict) -> dict:
-        # window/candle/signal agents are key-bound → needs a session restart
-        return {"ok": False,
-                "error": "index change applies on restart (saved to "
-                         "settings.json)"}
+        """INSTANT index switch (user directive) — memory+disk cached master,
+        no restart, no network. Refused only while a position is open."""
+        index = str(args.get("index", "")).upper()
+        if not self.master or index not in self.master.indices:
+            return {"ok": False, "error": f"index {index} not in master"}
+        if self._open_position():
+            return {"ok": False,
+                    "error": "close the open position before switching "
+                             "index (one index traded at a time)"}
+        self.index = index
+        self.spot_key = self.master.indices[index]
+        self.expiry = self._nearest_expiry(index)
+        self._replace_cfg(index=index)
+        self._persist()                            # disk cache of the choice
+        # hot-rebind the key-bound agents
+        self.cb.switch_key(self.spot_key)
+        self.sa.switch_index(index)
+        self.st.switch_index(index, self.expiry)
+        self.ui.switch_index(index, self.spot_key, self.expiry,
+                             self._lot_of(index))
+        self.md.keys = [self.spot_key]             # window rebuild adds opts
+        self.bus.publish(Topic.FEED_RECONNECT, f"index switch → {index}")
+        return {"ok": True,
+                "note": f"{index} · expiry {self.expiry} · "
+                        f"lot {self._lot_of(index)} (instant, cached master)"}
 
     def cmd_save_settings(self, args: dict) -> dict:
         changes = args.get("changes") or {}
         allowed = {"max_trades_per_day", "max_daily_loss_inr",
                    "sl_streak_stop", "time_stop_candles",
-                   "signal_ttl_candles", "stale_feed_s", "reconnect_stale_s"}
-        bad = set(changes) - allowed
+                   "signal_ttl_candles", "stale_feed_s", "reconnect_stale_s",
+                   "square_off"}
         applied = {k: v for k, v in changes.items() if k in allowed}
+        skipped = sorted(set(changes) - allowed - {"index"})
+        if "index" in changes:                     # route through instant path
+            r = self.cmd_set_index({"index": changes["index"]})
+            if not r["ok"]:
+                return r
         if applied:
             self._replace_cfg(**applied)
-        if self.settings_path:
-            config_mod.save(self.cfg, self.settings_path)
-        return {"ok": True,
-                "applied": sorted(applied),
-                "restart_required": sorted(bad | ({"index"} if "index" in
-                                                  changes else set()))}
+        self._persist()
+        return {"ok": True, "applied": sorted(applied),
+                "restart_required": skipped}
+
+    async def cmd_broker_save(self, args: dict) -> dict:
+        broker = args.get("broker", "")
+        secrets = {k: args.get(k, "") for k in
+                   ("api_key", "api_secret", "redirect_uri", "totp_secret")}
+        return await self.conn.save_secrets(broker, secrets)
+
+    async def cmd_broker_connect(self, args: dict) -> dict:
+        broker = args.get("broker", "")
+        if self._open_position():
+            return {"ok": False,
+                    "error": "close the open position before switching "
+                             "broker (one active broker)"}
+        r = await self.conn.connect(broker,
+                                    {"code": args.get("code", "")})
+        if r["ok"]:
+            await self._adopt_live(broker)
+        return r
+
+    async def cmd_broker_disconnect(self, args: dict) -> dict:
+        broker = args.get("broker", "")
+        if self._open_position() and self.conn.active == broker:
+            return {"ok": False,
+                    "error": "position open on the active broker — "
+                             "square off first"}
+        return await self.conn.disconnect(broker)
+
+    def cmd_journal_export(self, args: dict) -> dict:
+        try:
+            path, n = self.jr.export_csv(args.get("path"))
+            return {"ok": True, "note": f"exported {n} rows → {path}"}
+        except Exception as e:
+            return {"ok": False, "error": f"export failed: {e}"}
+
+    async def _adopt_live(self, broker: str) -> None:
+        """Hot-swap trading agents onto the live adapter+master (flat only)."""
+        adapter = self.conn.adapter(broker)
+        master = self.conn.master
+        if adapter is None or master is None:
+            return
+        self.master, self.adapter, self.broker = master, adapter, adapter
+        self.broker_name = broker
+        self.index = self._resolve_index(self.cfg.index)
+        self.spot_key = master.indices[self.index]
+        self.expiry = self._nearest_expiry(self.index)
+        self.ui.index_keys = dict(master.indices)
+        self.st.master = master
+        self.st.switch_index(self.index, self.expiry)
+        self.oa.adapter = adapter
+        self.md.adapter = adapter
+        self.md.keys = [self.spot_key]
+        self.ui.switch_index(self.index, self.spot_key, self.expiry,
+                             self._lot_of(self.index))
+        self.ui.broker_name = broker
+        self.bus.publish(Topic.FEED_RECONNECT, f"broker switch → {broker}")
 
     # ── wiring ──────────────────────────────────────────────────────
     def build(self, push_cb=None, hz: float = 10.0) -> None:
         from ..core.bus import EventBus
         bus = self.bus = EventBus()
         c = self.cfg
-        md = MarketDataAgent(bus, self.adapter, [self.spot_key])
-        cb = CandleBuilderAgent(bus, self.spot_key)
-        ia = IndicatorAgent(bus)
-        sa = SignalAgent(bus, c, self.index)
-        st = StrikeAgent(bus, self.master, c, self.index, self.expiry)
+        self.md = MarketDataAgent(bus, self.adapter, [self.spot_key])
+        self.cb = CandleBuilderAgent(bus, self.spot_key)
+        self.ia = IndicatorAgent(bus)
+        self.sa = SignalAgent(bus, c, self.index)
+        self.st = StrikeAgent(bus, self.master, c, self.index, self.expiry)
         # demo days run at any wall-clock hour → pin the session clock inside
         # the entry window (DEMO only; live mode uses real IST)
-        rk = RiskAgent(bus, c, clock_fn=(lambda: "10:30") if self.demo else None)
-        oa = OrderAgent(bus, self.broker)
-        px = PositionExitAgent(bus, c)
-        index_keys = dict(self.master.indices)
-        ui = UIAgent(bus, c, self.index, self.spot_key, index_keys,
-                     hz=hz, push_cb=push_cb, on_command=self._commands(),
-                     demo=self.demo)
-        ui.broker_name = self.broker_name
-        ui.expiry = self.expiry
-        lots = {m.lot_size for m in self.master.options.values()
-                if m.index_symbol == self.index}
-        ui.lot = min(lots) if lots else 0
-        sup = SupervisorAgent(bus, agents=(md, cb, ia, sa, st, rk, oa, px, ui),
-                              beat_s=1.0)
-        self.agents = [md, cb, ia, sa, st, rk, oa, px, ui, sup]
-        self.ui = ui
+        self.rk = RiskAgent(bus, c,
+                            clock_fn=(lambda: "10:30") if self.demo else None)
+        self.oa = OrderAgent(bus, self.broker)
+        self.px = PositionExitAgent(bus, c)
+        self.conn = ConnectionAgent(bus, c, self.store)
+        self.jr = JournalAgent(bus, self.data_dir / "journal.sqlite",
+                               broker=self.broker_name, demo=self.demo,
+                               mode=c.mode)
+        self.wd = WatchdogAgent(
+            bus, c, clock_fn=(lambda: "10:30") if self.demo else None,
+            orphan_check=self.conn.positions)
+        index_keys = dict(self.master.indices) if self.master else {}
+        self.ui = UIAgent(bus, c, self.index, self.spot_key, index_keys,
+                          hz=hz, push_cb=push_cb, on_command=self._commands(),
+                          demo=self.demo)
+        self.ui.broker_name = self.broker_name
+        self.ui.expiry = self.expiry
+        self.ui.lot = self._lot_of(self.index)
+        self.sup = SupervisorAgent(
+            bus, agents=(self.md, self.cb, self.ia, self.sa, self.st,
+                         self.rk, self.oa, self.px, self.conn, self.jr,
+                         self.wd, self.ui), beat_s=1.0)
+        self.agents = [self.md, self.cb, self.ia, self.sa, self.st, self.rk,
+                       self.oa, self.px, self.conn, self.jr, self.wd,
+                       self.ui, self.sup]
 
     async def start(self) -> None:
         for a in self.agents:
@@ -159,6 +289,38 @@ class ScaplerRuntime:
     async def stop(self) -> None:
         for a in reversed(self.agents):
             await a.stop()
+
+
+class _NullAdapter:
+    """Pre-connect placeholder: opens an idle feed; orders are refused."""
+    name = "none"
+    master = None
+
+    async def open_feed(self, keys, mode="full"):
+        return _IdleHandle()
+
+    async def update_subs(self, keys):
+        pass
+
+
+class _IdleHandle:
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        await asyncio.sleep(3600)
+        raise StopAsyncIteration
+
+    async def close(self):
+        pass
+
+
+class _NullBroker:
+    name = "none"
+    master = None
+
+    async def place_market_order(self, req):
+        raise RuntimeError("no broker connected — Settings → broker connect")
 
 
 # ── entry points ────────────────────────────────────────────────────

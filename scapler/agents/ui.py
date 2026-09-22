@@ -42,7 +42,7 @@ JOBS = {
     "ui": "snapshots 10–20 Hz → WebView2",
     "supervisor": "health, crash-restart, kill",
 }
-PLANNED = ("connection", "watchdog", "journal")   # Phase 6 agents
+PLANNED: tuple[str, ...] = ()          # all 13 agents exist as of Phase 6
 
 # journal/log topic → producing agent (display only)
 SRC = {
@@ -73,7 +73,8 @@ class UIAgent(Agent):
               Topic.WINDOW_REBUILT, Topic.ORDER_REQUEST, Topic.ORDER_APPROVED,
               Topic.RISK_VETO, Topic.ORDER_REQ, Topic.ORDER_FILL,
               Topic.ORDER_REJECTED, Topic.POSITION_UPDATE, Topic.EXIT_TRIGGER,
-              Topic.KILL_SWITCH, Topic.AGENT_HEALTH)
+              Topic.KILL_SWITCH, Topic.AGENT_HEALTH,
+              Topic.WATCHDOG_STATUS, Topic.CONNECTION_STATUS)
 
     def __init__(self, bus, settings: Settings, index: str,
                  spot_key: str, index_keys: dict[str, str],
@@ -110,6 +111,10 @@ class UIAgent(Agent):
         self.sl_streak = 0
         self.killed = False
         self.agents: dict[str, dict] = {}
+        self.watchdog: dict = {}
+        self.connection: dict = {"broker": "", "state": "DISCONNECTED",
+                                 "error": "", "master_source": "",
+                                 "master_options": 0}
         self._first_seen: dict[str, float] = {}
         # telemetry
         self._tick_count = 0
@@ -249,6 +254,15 @@ class UIAgent(Agent):
             self._audit(env, f"kill.switch ({p.source}) → square off + halt "
                              f"entries", "dn")
             return
+        if t == Topic.WATCHDOG_STATUS:
+            self.watchdog = p
+            return
+        if t == Topic.CONNECTION_STATUS:
+            self.connection = {**self.connection, **p}
+            self._audit(env, f"{p.get('broker', '?')} → {p.get('state', '?')}"
+                             + (f" ({p['error']})" if p.get("error") else ""),
+                        "dn" if p.get("error") else "up")
+            return
         if t == Topic.AGENT_HEALTH:
             now = mono_ns() / 1e9
             self._first_seen.setdefault(p.name, now)
@@ -266,8 +280,24 @@ class UIAgent(Agent):
         return f"{s // 3600}h{(s % 3600) // 60:02d}m" if s >= 3600 \
             else f"{s // 60}m{s % 60:02d}s"
 
+    def switch_index(self, index: str, spot_key: str, expiry: str,
+                     lot: int) -> None:
+        """Instant index switch: panels rebind to the new spot; window and
+        signal state reset (the new SignalAgent FSM starts DISARMED).
+        Journal/log persist — the audit trail spans the whole session."""
+        self.index = index
+        self.spot_key = spot_key
+        self.expiry = expiry
+        self.lot = lot
+        self.window = None
+        self.selected = {}
+        self.states = {o.value: "DISARMED" for o in OptionType}
+        self.sig_reason = {o.value: "" for o in OptionType}
+        self.setup_text = {}
+
     # ── commands (JS → bus) ─────────────────────────────────────────
-    def handle_command(self, name: str, args: dict | None = None) -> dict:
+    async def handle_command(self, name: str,
+                             args: dict | None = None) -> dict:
         args = args or {}
         try:
             if name == "execute":
@@ -279,10 +309,12 @@ class UIAgent(Agent):
                 self._manual_exit()
             elif name in ("set_mode", "set_index", "set_lots",
                           "save_settings", "broker_save", "broker_connect",
-                          "broker_disconnect"):
+                          "broker_disconnect", "journal_export"):
                 cb = self.on_command.get(name)
                 if cb is not None:
                     out = cb(args)
+                    if asyncio.iscoroutine(out):
+                        out = await out
                     if isinstance(out, dict):
                         return out
             else:
@@ -415,8 +447,13 @@ class UIAgent(Agent):
         return {
             "ts": _ts(), "demo": self.demo, "killed": self.killed,
             "mode": cfg.mode, "index": self.index,
-            "header": {"broker": getattr(self, "broker_name", "—"),
-                       "connected": bool(self.ltp),
+            "header": {"broker": (self.connection.get("broker")
+                                  if self.connection.get("state")
+                                  == "CONNECTED"
+                                  else getattr(self, "broker_name", "—")),
+                       "connected": bool(self.ltp) if self.demo
+                       else self.connection.get("state") == "CONNECTED",
+                       "conn_state": self.connection.get("state", ""),
                        "ltps": header_ltps,
                        "ticks_per_s": round(self.ticks_per_s, 1),
                        "spot_ltp": _f(ltp),
@@ -437,6 +474,7 @@ class UIAgent(Agent):
             "log": list(self.log)[-40:],
             "journal": list(self.journal)[-200:],
             "agents": agents_rows, "agents_planned": planned,
+            "watchdog": self.watchdog, "connection": self.connection,
             "bus_rates": dict(sorted(self.bus.stats.published.items(),
                                      key=lambda kv: -kv[1])[:8]),
             "settings": self._settings_view(),

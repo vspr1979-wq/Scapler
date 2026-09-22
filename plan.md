@@ -510,6 +510,35 @@ Scapler/
   both sides, T1/T2 trail flags + BE ratchet visible, T3/SL/TIME_STOP
   exits, EXIT button → SELL_TO_CLOSE fill → flat, KILL → force square-off
   + EXECUTE disabled. 150 tests green (+2 skipped), bench PASS.
+- 2026-09-23 — Phase 6 ✅ : journal/watchdog/connection agents → the full
+  13-agent roster is live. `agents/journal.py` (SQLite WAL, synchronous=FULL
+  commits on the order path before the next message is consumed; tables
+  sessions/events/signals/orders/fills/positions/risk_veto/agent_health;
+  EXPORT CSV streams the DB). `agents/watchdog.py` (stale-feed →
+  `feed.reconnect` with reconnect_stale_s cooldown, square-off at 15:20 IST
+  via kill.switch(source=watchdog) → PositionExit books SQUARE_OFF (not
+  KILL), orphan-policy hook, 1 Hz `watchdog.status` for the status bar).
+  `agents/connection.py` (both brokers, one active: secrets →
+  SecretStore → login → master via memory→disk→network cache →
+  `connection.status`; daily token refresh 09:10–09:16). `core/
+  secrets_store.py` (Windows DPAPI CryptProtectData; 0600 plaintext dev
+  fallback with warning — never committed, git-ignored). `brokers/
+  master_cache.py` (same-day JSON cache, corrupt-file refetch, 3-day
+  pruning). **User directives:** index priority NIFTY (default) → SENSEX →
+  BANKNIFTY → FINNIFTY → MIDCPNIFTY everywhere (Settings order drives the
+  dropdown); index switch is INSTANT — no restart prompt: candle/signal/
+  strike/UI hot-rebind + feed reconnect against the memory-cached master,
+  choice persisted to settings.json; refused only while a position is open
+  (one index at a time). Demo feed now streams all five indices (spots +
+  ATM±2 quotes, phase-staggered episodes) so every dropdown entry has live
+  data. Packaging: `scapler/__main__.py` entry (`scapler` console script),
+  PyInstaller `packaging/scapler.spec` (onedir, windowed, web assets
+  bundled, tkinter/pandas excluded) + `tools/build_windows.ps1`.
+  Verified live over the dev server: NIFTY default (lot 65), instant switch
+  SENSEX (lot 20, window 79500–80500 BSE) → BANKNIFTY (lot 30) → back to
+  NIFTY, 2 trades + ladder exits on NIFTY, journal WAL 676 events /
+  35 orders / 7 fills, CSV export, 13/13 agents healthy. 174 tests green
+  (+2 skipped), bench PASS.
 
 
 

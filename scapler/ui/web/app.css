@@ -30,6 +30,7 @@ b.mono, td, .log { font-variant-numeric:tabular-nums; }
 .led.on { background:var(--up); box-shadow:0 0 6px var(--up); }
 .led.off { background:#484f58; }
 .led.demo { background:var(--gd); box-shadow:0 0 6px var(--gd); }
+.led.err { background:var(--dn); box-shadow:0 0 6px var(--dn); }
 .broker { font-weight:600; color:var(--hi); }
 .idx b { color:var(--hi); font-size:11px; }
 .idx span { font-size:15px; }

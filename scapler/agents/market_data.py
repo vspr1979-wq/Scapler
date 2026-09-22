@@ -15,7 +15,7 @@ from .base_imports import Agent
 
 class MarketDataAgent(Agent):
     name = "market_data"
-    topics: tuple[str, ...] = (Topic.WINDOW_REBUILT,)
+    topics: tuple[str, ...] = (Topic.WINDOW_REBUILT, Topic.FEED_RECONNECT)
 
     def __init__(self, bus, adapter, keys: list[str], mode: str = "full") -> None:
         super().__init__(bus)
@@ -24,6 +24,7 @@ class MarketDataAgent(Agent):
         self.mode = mode
         self.handle = None
         self.ticks_total = 0
+        self.reconnects = 0
         self.last_tick_mono = 0
         self._window_count = 0
         self._window_start = mono_ns()
@@ -33,7 +34,28 @@ class MarketDataAgent(Agent):
         self.handle = await self.adapter.open_feed(self.keys, self.mode)
         self._pump = asyncio.get_running_loop().create_task(self._run())
 
+    async def reconnect(self) -> None:
+        """Close the handle and re-open with the current key set (watchdog
+        stale-feed recovery and instant index switching both funnel here)."""
+        self.reconnects += 1
+        if getattr(self, "_pump", None) is not None:
+            self._pump.cancel()
+            try:
+                await self._pump
+            except (asyncio.CancelledError, Exception):
+                pass
+        if self.handle is not None:
+            try:
+                await self.handle.close()
+            except Exception:
+                pass
+        self.handle = await self.adapter.open_feed(self.keys, self.mode)
+        self._pump = asyncio.get_running_loop().create_task(self._run())
+
     async def on_message(self, env) -> None:
+        if env.topic == Topic.FEED_RECONNECT:
+            await self.reconnect()
+            return
         # window.rebuilt (plan §3.2): adopt the strike-window footprint —
         # hot-resubscribe when the adapter supports it, else next reconnect.
         if env.topic == Topic.WINDOW_REBUILT:

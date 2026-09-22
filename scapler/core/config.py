@@ -30,11 +30,12 @@ class Setup:
 @dataclass(frozen=True)
 class Settings:
     broker_active: str = "upstox"
+    # display/trading priority order: NIFTY default → SENSEX → BANKNIFTY
     steps: dict[str, float] = field(default_factory=lambda: {
-        "NIFTY": 50.0, "BANKNIFTY": 100.0, "SENSEX": 100.0,
+        "NIFTY": 50.0, "SENSEX": 100.0, "BANKNIFTY": 100.0,
         "FINNIFTY": 50.0, "MIDCPNIFTY": 25.0,
     })
-    index: str = "BANKNIFTY"
+    index: str = "NIFTY"
     lot_multiplier: int = 1
     mode: str = "MANUAL"                      # AUTO | MANUAL
     targets: Targets = field(default_factory=Targets)
@@ -52,6 +53,7 @@ class Settings:
     setup: Setup = field(default_factory=Setup)
     recenter_steps: int = 2
     replay: bool = False
+    data_dir: str = "~/.scapler"               # journal, master cache, secrets
 
 
 _TUPLE_FIELDS = {"trail_n1", "entry_window"}

@@ -112,13 +112,22 @@ function render(s) {
   }
   $("brokername").textContent = s.header.broker;
   $("brokerled").className = "led " + (s.demo ? "demo" :
-    s.header.connected ? "on" : "off");
+    s.header.conn_state === "CONNECTED" ? "on" :
+    s.header.conn_state === "ERROR" ? "err" : "off");
   $("tickrate").textContent = s.header.ticks_per_s ?? 0;
   $("clock").textContent = s.ts;
 
-  /* controls */
+  /* controls — dropdown rebuilt from backend order (NIFTY, SENSEX,
+     BANKNIFTY, …) so the priority list lives in Settings, not in markup */
   const ctl = s.controls;
-  $("idxsel").value = ctl.index;
+  const sel = $("idxsel");
+  const want = (ctl.indices || []).join(",");
+  if (cache["idxopts"] !== want) {
+    cache["idxopts"] = want;
+    sel.innerHTML = (ctl.indices || []).map((i) =>
+      `<option${i === ctl.index ? " selected" : ""}>${i}</option>`).join("");
+  }
+  sel.value = ctl.index;
   $("expiry").textContent = ctl.expiry ?
     `${ctl.expiry} · auto(master)` : "—";
   $("lots").textContent = ctl.lots;
@@ -258,9 +267,25 @@ function renderLog(s) {
 
 function renderSettings(s) {
   const st = s.settings;
-  if (!changed("settings", st)) return;
-  $("active-upstox").textContent = st.broker_active === "upstox" ? "● active broker" : "";
-  $("active-groww").textContent = st.broker_active === "groww" ? "● active broker" : "";
+  const conn = s.connection || {};
+  if (!changed("settings", st) && !changed("conn", conn)) return;
+  const isAct = (b) => conn.active === b || st.broker_active === b;
+  $("active-upstox").textContent = isAct("upstox") ? "● active broker" : "";
+  $("active-groww").textContent = isAct("groww") ? "● active broker" : "";
+  for (const [b, el, led] of [["upstox", "up-status", "led-upstox"],
+                              ["groww", "gr-status", "led-groww"]]) {
+    const mine = conn.broker === b ? conn : null;
+    const txt = mine ?
+      `${mine.state}${mine.error ? " — " + mine.error : ""}` +
+      (mine.master_source ? ` · master ${mine.master_source}` : "") :
+      "not connected";
+    $(el).textContent = txt;
+    $(el).className = "mono " + (mine && mine.state === "CONNECTED" ? "up" :
+      mine && mine.state === "ERROR" ? "dn" : "dim");
+    $(led).className = "led " + (mine && mine.state === "CONNECTED" ? "on" :
+      mine && mine.state === "ERROR" ? "err" : "off");
+  }
+  if (!changed("settings2", st)) return;
   $("set-maxtrades").value = st.max_trades_per_day;
   $("set-maxloss").value = st.max_daily_loss_inr;
   $("set-slstreak").value = st.sl_streak_stop;
@@ -314,14 +339,23 @@ function renderStatus(s) {
   const bar = $("statusbar");
   const pos = s.position.open ?
     `position OPEN ${s.position.qty} ${s.position.instrument}` : "FLAT";
+  const wd = s.watchdog || {};
+  const stale = wd.stale_s === null || wd.stale_s === undefined ? "—" :
+    (wd.stale_s > 5 ? `${wd.stale_s}s STALE` : `${wd.stale_s}s`);
   bar.textContent =
-    `${s.killed ? "■ KILLED" : s.demo ? "● DEMO feed" : s.header.connected ? "● feed connected" : "○ feed idle"}` +
+    `${s.killed ? (wd.squared_off ? "■ SQUARED OFF" : "■ KILLED") :
+      s.demo ? "● DEMO feed" : s.header.connected ? "● feed connected" :
+      "○ feed idle"}` +
     `  |  ticks/s ${s.header.ticks_per_s ?? 0}` +
+    `  |  feed age ${stale} · reconnects ${wd.reconnects ?? 0}` +
+    `  |  latency ${wd.feed_latency_ms ?? "—"} ms` +
     `  |  ${s.mode} mode  |  ${pos}` +
     `  |  trades ${s.signals.today.trades}/${s.signals.today.max}` +
     `  |  agents ${(s.agents || []).length} running` +
+    `  |  square-off ${wd.square_off_at ?? s.settings.square_off}` +
     `  |  ${s.ts} IST  |  REPLAY ${s.settings.replay ? "ON" : "OFF"}`;
-  bar.className = "card mono" + (s.killed ? " err" : s.demo ? " warn" : "");
+  bar.className = "card mono" +
+    (s.killed ? " err" : (s.demo || (wd.stale_s ?? 0) > 5) ? " warn" : "");
 }
 
 /* ───────────────────────── UI events ───────────────────────── */
@@ -333,8 +367,7 @@ document.querySelectorAll("#tabs button").forEach((b) => b.onclick = () => {
 
 $("m-auto").onclick = () => cmd("set_mode", { mode: "AUTO" });
 $("m-manual").onclick = () => cmd("set_mode", { mode: "MANUAL" });
-$("idxsel").onchange = (e) =>
-  cmd("save_settings", { changes: { index: e.target.value } });
+$("idxsel").onchange = (e) => cmd("set_index", { index: e.target.value });
 
 let lotsLocal = 1;
 function bumpLots(d) {
@@ -365,7 +398,10 @@ document.querySelectorAll("[data-broker-save]").forEach((b) => b.onclick = () =>
   cmd("broker_save", { broker: which, api_key: key, api_secret: secret, ...extra });
 });
 document.querySelectorAll("[data-broker-connect]").forEach((b) => b.onclick =
-  () => cmd("broker_connect", { broker: b.dataset.brokerConnect }));
+  () => cmd("broker_connect", {
+    broker: b.dataset.brokerConnect,
+    code: $("up-code") ? $("up-code").value.trim() : "",
+  }));
 document.querySelectorAll("[data-broker-disconnect]").forEach((b) => b.onclick =
   () => cmd("broker_disconnect", { broker: b.dataset.brokerDisconnect }));
 
@@ -384,6 +420,7 @@ $("set-save").onclick = () => cmd("save_settings", {
 $("jfilter").oninput = (e) => { journalFilter = e.target.value.trim();
   if (lastSnap) { delete cache["journal"]; renderJournal(lastSnap); } };
 $("jexport").onclick = () => {
+  cmd("journal_export");                 // full SQLite dump → data dir
   const rows = (lastSnap && lastSnap.journal) || [];
   const csv = ["seq,ts,topic,agent,detail",
     ...rows.map((r) => [r.seq, r.ts, r.topic, r.agent,

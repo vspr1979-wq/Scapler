@@ -36,8 +36,8 @@ async def start_dev_server(runtime, host: str = "0.0.0.0",
 
     async def cmd(req):
         body = await req.json()
-        out = runtime.ui.handle_command(body.get("name", ""),
-                                        body.get("args") or {})
+        out = await runtime.ui.handle_command(body.get("name", ""),
+                                              body.get("args") or {})
         return web.json_response(out)
 
     async def ws(req):
@@ -52,7 +52,7 @@ async def start_dev_server(runtime, host: str = "0.0.0.0",
                     try:
                         d = json.loads(msg.data)
                         if d.get("t") == "cmd":
-                            out = runtime.ui.handle_command(
+                            out = await runtime.ui.handle_command(
                                 d.get("name", ""), d.get("args") or {})
                             await sock.send_str(orjson.dumps(
                                 {"t": "cmd_result", **out}).decode())
@@ -118,7 +118,7 @@ def run_webview(runtime) -> None:                    # pragma: no cover (Win)
             return json.dumps(fut.result(timeout=5.0))
 
     async def _dispatch(name, args):
-        return runtime.ui.handle_command(name, args)
+        return await runtime.ui.handle_command(name, args)
 
     async def _main():
         runtime.build(push_cb=push)

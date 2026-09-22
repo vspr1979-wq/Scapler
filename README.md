@@ -24,12 +24,17 @@ Reference mock: `ui_mockup.html` / `ui_mockup.png`.
 - Phase 2 — Groww adapter: REST v1 (token/orders/cancel/positions/ltp-batch),
   instrument.csv parser, poll feed handle, cross-broker parity suite, unified
   canonical feed keys (`NSE_FO|token` on both brokers).
-150 unit tests green (+2 skipped live-fixture). Phase 5 UI is up: text-only
-dark theme, zero charts, TRADE/SETTINGS/JOURNAL/AGENTS tabs, global KILL
-SWITCH, pywebview/WebView2 desktop path + aiohttp dev preview
-(`python -m scapler.ui --dev --demo` — labelled synthetic fixtures, stub
-broker, no real orders). Next: Phase 6 journal/watchdog/packaging,
-Phase 7 shadow run + go-live.
+174 unit tests green (+2 skipped live-fixture). Phase 6 is in: all 13
+agents running — SQLite-WAL journal (order-path rows committed before the
+next message), watchdog (stale-feed reconnect, 15:20 square-off, orphan
+policy), connection agent (Upstox OAuth code / Groww key+secret+TOTP,
+DPAPI secret store, instrument master via memory→same-day-disk→network
+cache), Windows packaging (`tools/build_windows.ps1` + PyInstaller spec,
+WebView2). Index priority: NIFTY (default) → SENSEX → BANKNIFTY →
+FINNIFTY → MIDCPNIFTY; the dropdown hot-switches instantly (no restart)
+against the cached master and persists to settings.json. Try it:
+`python -m scapler --dev --demo` (labelled synthetic fixtures, stub
+broker, no real orders). Next: Phase 7 shadow-mode live run + go-live.
 
 ### Live validation (operator machine)
 The sandbox cannot reach broker hosts. On a machine with network access:

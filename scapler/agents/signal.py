@@ -31,6 +31,16 @@ class SignalAgent(Agent):
     def set_mode(self, mode: str) -> None:
         self.cfg = replace(self.cfg, mode=mode)
 
+    def switch_index(self, index: str) -> None:
+        """Instant index switch: fresh FSMs (DISARMED both sides), new
+        atr_min, candle cache dropped — signals only from the new index's
+        CLOSED candles. HELD stays False: switching is refused while a
+        position is open (runtime guard)."""
+        self.index = index
+        self.atr_min = self.cfg.setup.atr_min.get(index, 0.0)
+        self.fsm = SignalEngine(self.cfg)
+        self._candles.clear()
+
     async def on_message(self, env) -> None:
         if env.topic == Topic.CANDLE_CLOSED:
             self._candles[env.payload.key] = env.payload

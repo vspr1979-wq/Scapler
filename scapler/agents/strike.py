@@ -32,7 +32,7 @@ class StrikeAgent(Agent):
         self.cfg = settings
         self.index = index
         self.expiry = expiry
-        self.spot_key = master.indices[index]
+        self.spot_key = master.indices.get(index, "") if master else ""
         self.spot = 0.0
         self.window = None
         self.key_map: dict[str, tuple[float, OptionType]] = {}
@@ -69,6 +69,18 @@ class StrikeAgent(Agent):
         # strike STEP is a Settings value (plan §1); the master validates
         # lots/tokens/expiries and Phase-6 reconciles step drift warnings
         return self.cfg.steps.get(self.index, 100.0)
+
+    def switch_index(self, index: str, expiry: str) -> None:
+        """Instant index switch: window/quotes reset; the new window builds
+        from the new spot's first tick (memory+disk-cached master — no
+        network wait). sub_keys shrink to the new spot immediately."""
+        self.index = index
+        self.expiry = expiry
+        self.spot_key = self.master.indices[index]
+        self.spot = 0.0
+        self.window = None
+        self.key_map, self.quotes = {}, {}
+        self.sub_keys = [self.spot_key]
 
     # ── messages ────────────────────────────────────────────────────
     async def on_message(self, env) -> None:

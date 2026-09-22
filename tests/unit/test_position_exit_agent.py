@@ -162,3 +162,23 @@ async def test_manual_exit_reason_from_ui_trigger():
     assert closed.realized_pnl == (150.0 - 148.2) * 30
     assert KEY not in a.trackers
     await a.stop()
+
+
+async def test_watchdog_kill_books_as_square_off():
+    """kill.switch(source=watchdog) at 15:20 → reason SQUARE_OFF (not KILL)."""
+    from scapler.core.messages import KillSwitch
+    bus, out, a = await _px()
+    bus.publish(Topic.ORDER_FILL, buy())
+    await asyncio.wait_for(out.get(), 1)
+    bus.publish(Topic.KILL_SWITCH, KillSwitch(source="watchdog"))
+    await asyncio.sleep(0.05)
+    reqs = await _drain_reqs(out, 1)
+    assert reqs[0].intent is OrderIntent.SELL_TO_CLOSE and reqs[0].qty == 30
+    assert a._reason[KEY] is ExitReason.SQUARE_OFF     # not KILL
+    bus.publish(Topic.ORDER_FILL, sell(147.0))
+    while True:
+        env = await asyncio.wait_for(out.get(), 1)
+        if env.topic == Topic.POSITION_UPDATE and env.payload.closed:
+            assert env.payload.exit_reason == "SQUARE_OFF"
+            break
+    await a.stop()

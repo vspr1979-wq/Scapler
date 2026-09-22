@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-broker = ["aiohttp>=3.9", "websockets>=12"]
+broker = ["aiohttp>=3.9", "websockets>=12", "pyotp>=2.4"]
 ui = ["pywebview>=5.0"]
 dev = ["pytest>=8", "pytest-asyncio>=0.23"]
 
@@ -24,5 +24,12 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 addopts = "-q"
 
+[project.scripts]
+scapler = "scapler.__main__:main"
+
 [tool.setuptools.packages.find]
 include = ["scapler*"]
+
+[tool.setuptools.package-data]
+"scapler.ui" = ["web/*"]
+"scapler.brokers.upstox" = ["proto/*"]

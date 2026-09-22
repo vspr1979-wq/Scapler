@@ -49,6 +49,13 @@ class CandleBuilderAgent(Agent):
         self._last_cum_vol: float | None = None
         self.candles_closed = 0
 
+    def switch_key(self, key: str) -> None:
+        """Instant index switch (user directive): drop the old spot bar state
+        and build candles for the new key from its next tick."""
+        self.key = key
+        self._bar = None
+        self._last_cum_vol = None
+
     async def on_start(self) -> None:
         self._flush = asyncio.get_running_loop().create_task(self._flush_loop())
 

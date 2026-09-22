@@ -33,7 +33,7 @@
 <div id="controls" class="card">
   <div>Index
     <select class="sel" id="idxsel">
-      <option>NIFTY</option><option selected>BANKNIFTY</option><option>SENSEX</option>
+      <option selected>NIFTY</option><option>SENSEX</option><option>BANKNIFTY</option>
       <option>FINNIFTY</option><option>MIDCPNIFTY</option>
     </select>
   </div>
@@ -146,12 +146,13 @@
         <div class="fieldrow"><span class="dim">API key</span><input id="up-key" type="password" placeholder="api key" autocomplete="off"><span class="dim mono">memory</span></div>
         <div class="fieldrow"><span class="dim">API secret</span><input id="up-secret" type="password" placeholder="api secret" autocomplete="off"><span class="dim mono">memory</span></div>
         <div class="fieldrow"><span class="dim">Redirect URI</span><input id="up-redirect" value="https://localhost/oauth"><span class="dim mono">saved</span></div>
+        <div class="fieldrow"><span class="dim">Access code</span><input id="up-code" placeholder="paste OAuth code after browser login"><span class="dim mono">once</span></div>
         <div class="btnrow">
           <button class="btn sm ghost" data-broker-save="upstox">SAVE</button>
           <button class="btn sm" data-broker-connect="upstox">CONNECT</button>
           <button class="btn sm ghost" data-broker-disconnect="upstox">DISCONNECT</button>
         </div>
-        <div class="kv" style="margin-top:6px"><span class="dim">Status</span><b class="dim mono" id="up-status">not connected — live wiring lands Phase 6</b></div>
+        <div class="kv" style="margin-top:6px"><span class="dim">Status</span><b class="dim mono" id="up-status">not connected</b></div>
       </div>
       <div class="panel card brokercard">
         <h4><span class="led off" id="led-groww"></span>Groww — GrowwAPI v1 <span class="badge">F3</span>
@@ -164,11 +165,11 @@
           <button class="btn sm" data-broker-connect="groww">CONNECT</button>
           <button class="btn sm ghost" data-broker-disconnect="groww">DISCONNECT</button>
         </div>
-        <div class="kv" style="margin-top:6px"><span class="dim">Status</span><b class="dim mono" id="gr-status">not connected — live wiring lands Phase 6</b></div>
+        <div class="kv" style="margin-top:6px"><span class="dim">Status</span><b class="dim mono" id="gr-status">not connected</b></div>
         <div class="dim" style="margin-top:6px;font-size:10.5px">
-          secrets are held in memory only this phase; DPAPI-encrypted at rest
-          lands with Phase 6 packaging. One active broker at a time; switching
-          requires flat.
+          secrets at rest: Windows DPAPI (current-user), dev machines fall
+          back to a 0600 file with a warning. Master: memory → same-day disk
+          cache → network. One active broker; switching requires flat.
         </div>
       </div>
     </div>
@@ -219,8 +220,9 @@
       <tbody id="journal-body"><tr><td colspan="5" class="dim">no events yet</td></tr></tbody>
     </table>
     <div class="dim" style="margin-top:6px;font-size:10.5px">
-      in-memory this phase (last 500 events) · SQLite WAL write-ahead journal
-      lands Phase 6 · CSV export includes the full in-memory buffer
+      live view = in-memory ring (last 200) · durable store = SQLite WAL
+      (orders/fills/vetoes committed before the next message) · EXPORT CSV
+      streams the FULL database to the data dir and downloads the view
     </div>
   </div>
 </div>

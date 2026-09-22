@@ -93,14 +93,14 @@ async def test_signal_states_and_execute_command():
     assert ce["state"] == "SIGNALED" and ce["can_execute"] is True
     assert snap["signals"]["sides"]["PE"]["can_execute"] is False
     # MANUAL click relays ui.execute with the side
-    assert ui.handle_command("execute", {"side": "CE"}) == {"ok": True}
+    assert await ui.handle_command("execute", {"side": "CE"}) == {"ok": True}
     ex = await _drain(out, Topic.UI_EXECUTE)
     assert ex == [OT.CE]
     # AUTO mode → EXECUTE disabled (auto-fire chip on the JS side)
     ui.cfg = __import__("dataclasses").replace(ui.cfg, mode="AUTO")
     assert ui.snapshot()["signals"]["sides"]["CE"]["can_execute"] is False
     # unknown command never raises
-    assert ui.handle_command("nope")["ok"] is False
+    assert (await ui.handle_command("nope"))["ok"] is False
     await ui.stop()
 
 
@@ -123,7 +123,7 @@ async def test_kill_and_position_exit_commands():
     assert ui.snapshot()["signals"]["today"]["trades"] == 1
     # EXIT button → EXIT_TRIGGER(MANUAL) + SELL_TO_CLOSE for the full qty
     ui.window = WINDOW
-    assert ui.handle_command("exit_position")["ok"] is True
+    assert (await ui.handle_command("exit_position"))["ok"] is True
     await asyncio.sleep(0.05)
     envs = []
     while out.depth():
@@ -134,7 +134,7 @@ async def test_kill_and_position_exit_commands():
     assert len(reqs) == 1 and reqs[0].intent is OrderIntent.SELL_TO_CLOSE
     assert reqs[0].qty == 30 and reqs[0].instrument.feed_key == OK
     # KILL button → kill.switch on the bus
-    assert ui.handle_command("kill")["ok"] is True
+    assert (await ui.handle_command("kill"))["ok"] is True
     ks = await _drain(out, Topic.KILL_SWITCH)
     assert len(ks) == 1 and isinstance(ks[0], KillSwitch) and ks[0].source == "ui"
     await ui.stop()
@@ -170,7 +170,7 @@ async def test_agent_health_and_command_callback():
     snap = ui.snapshot()
     row = next(a for a in snap["agents"] if a["name"] == "risk")
     assert row["state"] == "RUN" and row["job"] == "vetoes, breakers, guards"
-    assert "connection" in snap["agents_planned"]      # Phase 6 placeholder
-    ui.handle_command("set_mode", {"mode": "AUTO"})
+    assert snap["agents_planned"] == []                 # all 13 exist (Ph6)
+    await ui.handle_command("set_mode", {"mode": "AUTO"})
     assert applied and applied[0]["mode"] == "AUTO"
     await ui.stop()

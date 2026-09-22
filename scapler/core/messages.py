@@ -36,6 +36,9 @@ class Topic:
     KILL_SWITCH = "kill.switch"
     AGENT_HEALTH = "agent.health"
     UI_SNAPSHOT = "ui.snapshot"
+    FEED_RECONNECT = "feed.reconnect"        # watchdog/UI → MarketData
+    WATCHDOG_STATUS = "watchdog.status"      # watchdog → UI (1 Hz dict)
+    CONNECTION_STATUS = "connection.status"  # connection → UI (dict)
 
 
 PRIORITY_TOPICS = frozenset({
