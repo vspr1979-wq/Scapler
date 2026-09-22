@@ -420,6 +420,13 @@ Scapler/
 
 ## 12. Roadmap (~3 weeks, phases independently testable)
 
+**Build log**
+- 2026-09-22 — Phase 0 ✅ : EventBus/Agent/messages/config + tests + bench PASS
+  (565k msg/s, p99 0.17 ms). Strategy core landed early and fully tested:
+  `strategy/setup.py`, `signal_fsm.py` (F6), `strikes.py` (F5), `exits.py` (§6),
+  `sideguard.py` (F2). 61 unit tests green.
+
+
 | Phase | Scope | Exit criteria | Days |
 |---|---|---|---|
 | 0 | Repo skeleton, EventBus + Agent base, msgspec catalog, CI, logging off hot path | bus bench: 100k msgs/s, p99 < 1 ms | 1–2 |

@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scapler"
+version = "0.1.0"
+description = "Windows 11 desktop algo scalper for Indian index OPTIONS BUYING (long premium only) on Upstox v2/Streamer v3 and Groww"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+dependencies = [
+    "msgspec>=0.18",
+    "orjson>=3.9",
+]
+
+[project.optional-dependencies]
+broker = ["aiohttp>=3.9", "websockets>=12"]
+ui = ["pywebview>=5.0"]
+dev = ["pytest>=8", "pytest-asyncio>=0.23"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.setuptools.packages.find]
+include = ["scapler*"]
