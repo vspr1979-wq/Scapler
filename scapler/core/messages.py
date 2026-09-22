@@ -39,6 +39,7 @@ class Topic:
     FEED_RECONNECT = "feed.reconnect"        # watchdog/UI → MarketData
     WATCHDOG_STATUS = "watchdog.status"      # watchdog → UI (1 Hz dict)
     CONNECTION_STATUS = "connection.status"  # connection → UI (dict)
+    SESSION_NEW_DAY = "session.new_day"      # watchdog → risk/journal/UI
 
 
 PRIORITY_TOPICS = frozenset({

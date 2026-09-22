@@ -23,6 +23,10 @@ b.mono, td, .log { font-variant-numeric:tabular-nums; }
                border-radius:6px; padding:6px 12px; margin-bottom:8px; font-size:11.5px; }
 #banner-replay { background:rgba(227,179,65,.10); border:1px solid #9e6a03; color:var(--gd);
                  border-radius:6px; padding:6px 12px; margin-bottom:8px; font-size:11.5px; }
+#banner-shadow { background:rgba(88,166,255,.10); border:1px solid #1f6feb; color:var(--bl);
+                 border-radius:6px; padding:6px 12px; margin-bottom:8px; font-size:11.5px; }
+#kill.rearm { background:#1f6feb; }
+#kill.rearm:hover { background:#388bfd; }
 
 /* global header strip */
 #header { display:flex; align-items:center; gap:26px; padding:8px 14px; }

@@ -539,6 +539,34 @@ Scapler/
   NIFTY, 2 trades + ladder exits on NIFTY, journal WAL 676 events /
   35 orders / 7 fills, CSV export, 13/13 agents healthy. 174 tests green
   (+2 skipped), bench PASS.
+- 2026-09-23 — Phase 7 ✅ : SHADOW MODE + go-live tooling — the last step
+  before real money. `Settings.shadow` (default **ON**): the full stack runs
+  on the real feed, but OrderAgent stubs the adapter edge — fills are
+  computed at the REAL prevailing quotes (BUY at ask, SELL at bid, LTP
+  fallback when the book is empty), order ids `SHADOW-{client_id}`, and
+  **no broker call is made**; SideGuard, risk counters, journal and UI all
+  run for real. Shadow flips live from the Settings tab (persisted to
+  settings.json; flipping OFF warns "LIVE ORDERS will be sent"). UI: blue
+  "SHADOW MODE — no real orders" banner + status-bar tag; the KILL button
+  becomes **RE-ARM** once halted (refused while a position is open; clears
+  risk/watchdog/supervisor/UI kill flags). Daily rollover: WatchdogAgent
+  watches the IST date (injectable `date_fn`) and publishes
+  `session.new_day` → RiskAgent resets trades/P&L/SL-streak/kill, Watchdog
+  clears squared_off, JournalAgent closes the session and opens a new one
+  (sessions labelled `AUTO/SHADOW` in shadow), UIAgent resets its counters.
+  Tools: `tools/shadow_report.py` (per-session cleanliness: signals,
+  fills, SG_* rejects, veto histogram, P&L by exit reason, fill-latency
+  p50/p99; "go-live ready" ⇔ ≥3 clean non-demo sessions) and
+  `tools/go_live_check.py` (§13 checklist: secrets present, master cached
+  today + lot/step sanity vs the plan table — master wins, journal
+  WAL/sessions/export, ≥3 clean shadow sessions, breakers configured,
+  square-off 15:20, plus MANUAL sign-off items and a win32 powercfg sleep
+  check; verdict GO / NO-GO / manual-signoff). Verified live over the dev
+  server: shadow default ON in the snapshot, toggle OFF→ON round-trip with
+  notes, kill → RE-ARM clears the halt, session 3 journalled as
+  MANUAL/SHADOW, both tools run against the live journal (correct NO-GO in
+  the sandbox: no secrets, 0/3 clean sessions). 190 tests green
+  (+2 skipped), bench PASS.
 
 
 

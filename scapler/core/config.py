@@ -54,6 +54,9 @@ class Settings:
     recenter_steps: int = 2
     replay: bool = False
     data_dir: str = "~/.scapler"               # journal, master cache, secrets
+    shadow: bool = True                        # SHADOW live run: full stack on
+    # real feeds, orders stubbed at the adapter edge (plan §12 Phase 7).
+    # Go-live requires ≥3 clean shadow sessions + checklist, then set False.
 
 
 _TUPLE_FIELDS = {"trail_n1", "entry_window"}

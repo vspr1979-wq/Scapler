@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS sessions(
   id INTEGER PRIMARY KEY, started_at TEXT, ended_at TEXT,
   broker TEXT, demo INTEGER, mode TEXT);
 CREATE TABLE IF NOT EXISTS events(
-  seq INTEGER, ts TEXT, topic TEXT, agent TEXT, detail TEXT);
+  seq INTEGER, ts TEXT, topic TEXT, agent TEXT, detail TEXT,
+  sess INTEGER);
 CREATE TABLE IF NOT EXISTS signals(
   seq INTEGER, ts TEXT, side TEXT, old TEXT, new TEXT, reason TEXT,
   candle_ts INTEGER, ttl INTEGER);
@@ -51,7 +52,8 @@ AUDIT = (Topic.CANDLE_CLOSED, Topic.INDICATORS_READY, Topic.SIGNAL_NEW,
          Topic.ORDER_REQUEST, Topic.ORDER_APPROVED, Topic.RISK_VETO,
          Topic.ORDER_REQ, Topic.ORDER_FILL, Topic.ORDER_REJECTED,
          Topic.POSITION_UPDATE, Topic.EXIT_TRIGGER, Topic.KILL_SWITCH,
-         Topic.AGENT_HEALTH, Topic.FEED_RECONNECT, Topic.CONNECTION_STATUS)
+         Topic.AGENT_HEALTH, Topic.FEED_RECONNECT, Topic.CONNECTION_STATUS,
+         Topic.SESSION_NEW_DAY)
 
 SRC = {
     Topic.CANDLE_CLOSED: "candle", Topic.INDICATORS_READY: "indicator",
@@ -63,6 +65,7 @@ SRC = {
     Topic.POSITION_UPDATE: "position", Topic.EXIT_TRIGGER: "position",
     Topic.KILL_SWITCH: "ui/any", Topic.AGENT_HEALTH: "supervisor",
     Topic.FEED_RECONNECT: "watchdog", Topic.CONNECTION_STATUS: "connection",
+    Topic.SESSION_NEW_DAY: "watchdog",
 }
 
 
@@ -75,11 +78,13 @@ class JournalAgent(Agent):
     topics = AUDIT
 
     def __init__(self, bus, db_path: str | Path, broker: str = "",
-                 demo: bool = False, mode: str = "MANUAL") -> None:
+                 demo: bool = False, mode: str = "MANUAL",
+                 shadow: bool = False) -> None:
         super().__init__(bus)
         self.db_path = Path(db_path).expanduser()
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.broker, self.demo, self.mode = broker, demo, mode
+        self.shadow = shadow
         self.rows = 0
         self.session_id: int | None = None
         self._db: sqlite3.Connection | None = None
@@ -95,12 +100,25 @@ class JournalAgent(Agent):
                       "degraded", mode)
         self._db.execute("PRAGMA synchronous=FULL").fetchone()
         self._db.executescript(DDL)
+        try:  # migrate pre-Phase-7 DBs: events gained a session id
+            self._db.execute("ALTER TABLE events ADD COLUMN sess INTEGER")
+        except sqlite3.OperationalError:
+            pass                        # column already present
+        self._open_session()
+
+    def _open_session(self) -> None:
+        mode = self.mode + ("/SHADOW" if self.shadow else "")
         cur = self._db.execute(
             "INSERT INTO sessions(started_at, ended_at, broker, demo, mode) "
             "VALUES(?,?,?,?,?)", (utc_iso(), None, self.broker,
-                                 int(self.demo), self.mode))
+                                 int(self.demo), mode))
         self.session_id = cur.lastrowid
         self._db.commit()
+
+    def _roll_session(self) -> None:
+        self._db.execute("UPDATE sessions SET ended_at=? WHERE id=?",
+                         (utc_iso(), self.session_id))
+        self._open_session()
 
     async def on_stop(self) -> None:
         if self._db is not None:
@@ -182,6 +200,9 @@ class JournalAgent(Agent):
                     (ts, p.name, p.state, p.restarts, p.inbox_depth,
                      p.p99_ms, p.beat_age_s))
                 return                      # health: table only, no events
+            elif t == Topic.SESSION_NEW_DAY:
+                detail = f"new session day {p}"
+                self._roll_session()
             elif t == Topic.FEED_RECONNECT:
                 detail = f"feed.reconnect ({p})"
             elif t == Topic.CONNECTION_STATUS:
@@ -189,8 +210,9 @@ class JournalAgent(Agent):
                          f"{p.get('error') or ''}".strip()
             else:
                 detail = str(p)[:160]
-            self._db.execute("INSERT INTO events VALUES(?,?,?,?,?)",
-                             (env.seq, ts, t, SRC.get(t, ""), detail))
+            self._db.execute("INSERT INTO events VALUES(?,?,?,?,?,?)",
+                             (env.seq, ts, t, SRC.get(t, ""), detail,
+                              self.session_id))
             self.rows += 1
             # order-path rows hit the disk before the next message is
             # consumed (synchronous=FULL commit); telemetry batches.

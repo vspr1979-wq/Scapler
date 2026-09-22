@@ -14,7 +14,7 @@ ladder, risk guardrails, journal DDL, roadmap.
 Reference mock: `ui_mockup.html` / `ui_mockup.png`.
 
 ## Status
-**Phases 0–2 complete** (2026-09-22):
+**Phases 0–7 complete** (2026-09-23) — build done; go-live gates remain:
 - Phase 0 — core runtime (EventBus with priority lane + latest-wins coalescing,
   supervised Agent base, message catalog, settings) and the pure strategy core:
   SideGuard (F2), strike window (F5), no-spam signal FSMs (F6), T1/T2/T3/SL exit
@@ -24,17 +24,38 @@ Reference mock: `ui_mockup.html` / `ui_mockup.png`.
 - Phase 2 — Groww adapter: REST v1 (token/orders/cancel/positions/ltp-batch),
   instrument.csv parser, poll feed handle, cross-broker parity suite, unified
   canonical feed keys (`NSE_FO|token` on both brokers).
-174 unit tests green (+2 skipped live-fixture). Phase 6 is in: all 13
+190 unit tests green (+2 skipped live-fixture). Phases 6–7 are in: all 13
 agents running — SQLite-WAL journal (order-path rows committed before the
 next message), watchdog (stale-feed reconnect, 15:20 square-off, orphan
-policy), connection agent (Upstox OAuth code / Groww key+secret+TOTP,
-DPAPI secret store, instrument master via memory→same-day-disk→network
-cache), Windows packaging (`tools/build_windows.ps1` + PyInstaller spec,
-WebView2). Index priority: NIFTY (default) → SENSEX → BANKNIFTY →
-FINNIFTY → MIDCPNIFTY; the dropdown hot-switches instantly (no restart)
-against the cached master and persists to settings.json. Try it:
-`python -m scapler --dev --demo` (labelled synthetic fixtures, stub
-broker, no real orders). Next: Phase 7 shadow-mode live run + go-live.
+policy, IST new-day rollover via `session.new_day`), connection agent
+(Upstox OAuth code / Groww key+secret+TOTP, DPAPI secret store, instrument
+master via memory→same-day-disk→network cache), Windows packaging
+(`tools/build_windows.ps1` + PyInstaller spec, WebView2). Index priority:
+NIFTY (default) → SENSEX → BANKNIFTY → FINNIFTY → MIDCPNIFTY; the dropdown
+hot-switches instantly (no restart) against the cached master and persists
+to settings.json. Try it: `python -m scapler --dev --demo` (labelled
+synthetic fixtures, stub broker, no real orders).
+
+### Shadow mode & go-live (Phase 7)
+`Settings.shadow` is **ON by default**: the full stack runs on the real
+feed, but orders are stubbed at the adapter edge — fills are booked at the
+real prevailing quotes (BUY at ask, SELL at bid), order ids are
+`SHADOW-…`, and **nothing is sent to the broker**. Risk, journal, watchdog
+and the UI all run for real; flip shadow off from the Settings tab only
+after go-live sign-off. The KILL button turns into **RE-ARM** once halted
+(refused while a position is open). Daily counters reset automatically at
+the IST date boundary (`session.new_day`).
+
+Go-live procedure (plan §12–13):
+```bash
+python3 tools/shadow_report.py      # per-session cleanliness, P&L, latency
+python3 tools/go_live_check.py      # §13 checklist → GO / NO-GO verdict
+```
+Requires ≥3 clean shadow sessions (no SideGuard rejects), broker secrets
+saved, same-day instrument master, WAL journal + working CSV export,
+breakers configured, square-off 15:20 — plus the manual sign-off items
+(feed latency < 50 ms, kill-switch drill, UPS/power, Windows sleep off).
+First live session: lot multiplier 1, single trade.
 
 ### Live validation (operator machine)
 The sandbox cannot reach broker hosts. On a machine with network access:

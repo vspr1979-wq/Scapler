@@ -14,7 +14,7 @@ from .base_imports import Agent
 class RiskAgent(Agent):
     name = "risk"
     topics = (Topic.ORDER_REQUEST, Topic.ORDER_FILL, Topic.POSITION_UPDATE,
-              Topic.KILL_SWITCH, Topic.TICK_RAW)
+              Topic.KILL_SWITCH, Topic.TICK_RAW, Topic.SESSION_NEW_DAY)
 
     def __init__(self, bus, settings: Settings, clock_fn=None) -> None:
         super().__init__(bus)
@@ -53,6 +53,15 @@ class RiskAgent(Agent):
             return
         if t == Topic.KILL_SWITCH:
             self.killed = True
+            return
+        if t == Topic.SESSION_NEW_DAY:
+            # daily breakers reset for the new session (journal rolls the
+            # session too); kill state clears — a new day starts unarmed
+            self.trades = 0
+            self.sl_streak = 0
+            self.pnl = 0.0
+            self.held = False
+            self.killed = False
             return
         if t == Topic.ORDER_FILL:
             if env.payload.intent is OrderIntent.BUY_TO_OPEN:

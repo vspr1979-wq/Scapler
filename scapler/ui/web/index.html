@@ -13,6 +13,12 @@
   This feed is generated locally for UI development; it is not market data and
   cannot arm live trading. Live mode requires broker credentials (Phase 6).
 </div>
+<div id="banner-shadow" style="display:none">
+  <b>■ SHADOW MODE — LIVE DECISIONS, NO REAL ORDERS.</b>
+  Full stack runs on the real feed; every order is recorded in the journal at
+  the prevailing quote (ask/bid) but is NOT sent to the broker. Go-live needs
+  ≥3 clean shadow sessions + the go-live checklist (plan §12–13).
+</div>
 <div id="banner-replay" style="display:none">
   <b>■ REPLAY</b> — recorded real ticks. Replay can never arm the Signal agent
   in live mode.
@@ -188,6 +194,7 @@
         <div class="kv"><span class="dim">Targets T1/T2/T3/SL</span><b class="mono" id="set-targets">—</b></div>
         <div class="kv"><span class="dim">Orphan position</span><b class="mono" id="set-orphan">—</b></div>
         <div class="kv"><span class="dim">Replay mode</span><b class="mono dn" id="set-replay">OFF (live only)</b></div>
+        <div class="kv"><span class="dim">Shadow mode</span><b><button class="btn sm ghost" id="shadow-toggle">—</button></b></div>
         <div class="btnrow"><button class="btn sm" id="set-save">SAVE RISK SETTINGS</button></div>
       </div>
       <div class="panel card" style="margin-top:8px">

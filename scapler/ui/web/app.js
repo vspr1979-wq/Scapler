@@ -96,6 +96,7 @@ window.__snap = function (snap) {
 function render(s) {
   /* banners */
   $("banner-demo").style.display = s.demo ? "" : "none";
+  $("banner-shadow").style.display = (!s.demo && s.shadow) ? "" : "none";
   $("banner-replay").style.display =
     (!s.demo && s.settings && s.settings.replay) ? "" : "none";
 
@@ -137,8 +138,8 @@ function render(s) {
   $("m-auto").textContent = (auto ? "● " : "○ ") + "AUTO";
   $("m-manual").className = "radio" + (!auto ? " on" : "");
   $("m-manual").textContent = (!auto ? "● " : "○ ") + "MANUAL";
-  $("kill").className = s.killed ? "armed" : "";
-  $("kill").textContent = s.killed ? "■ KILLED — HALTED" : "■ KILL SWITCH";
+  $("kill").className = s.killed ? "armed rearm" : "";
+  $("kill").textContent = s.killed ? "● RE-ARM (halted)" : "■ KILL SWITCH";
 
   renderIndicators(s);
   renderSignals(s);
@@ -299,6 +300,9 @@ function renderSettings(s) {
     `+${st.targets.t1} / +${st.targets.t2} / +${st.targets.t3} / −${st.targets.sl} pts`;
   $("set-orphan").textContent = st.orphan_policy;
   $("set-replay").textContent = st.replay ? "ON (labelled)" : "OFF (live only)";
+  const sh = $("shadow-toggle");
+  sh.textContent = st.shadow ? "ON — flip to LIVE" : "OFF — flip to SHADOW";
+  sh.className = "btn sm " + (st.shadow ? "ghost" : "red");
   const LOTS = { NIFTY: 65, BANKNIFTY: 30, SENSEX: 20, FINNIFTY: 60, MIDCPNIFTY: 120 };
   $("contracts-body").innerHTML = Object.entries(st.steps).map(([idx, step]) =>
     `<tr class="${idx === s.index ? "hot" : ""}"><td>${idx}</td><td>${step}</td>` +
@@ -345,7 +349,7 @@ function renderStatus(s) {
   bar.textContent =
     `${s.killed ? (wd.squared_off ? "■ SQUARED OFF" : "■ KILLED") :
       s.demo ? "● DEMO feed" : s.header.connected ? "● feed connected" :
-      "○ feed idle"}` +
+      "○ feed idle"}${(!s.demo && s.shadow) ? " · SHADOW" : ""}` +
     `  |  ticks/s ${s.header.ticks_per_s ?? 0}` +
     `  |  feed age ${stale} · reconnects ${wd.reconnects ?? 0}` +
     `  |  latency ${wd.feed_latency_ms ?? "—"} ms` +
@@ -381,7 +385,10 @@ $("exec-CE").onclick = () => cmd("execute", { side: "CE" });
 $("exec-PE").onclick = () => cmd("execute", { side: "PE" });
 $("exit-btn").onclick = () => cmd("exit_position");
 
-$("kill").onclick = () => { $("modal").style.display = "flex"; };
+$("kill").onclick = () => {
+  if (lastSnap && lastSnap.killed) cmd("rearm");
+  else $("modal").style.display = "flex";
+};
 $("m-cancel").onclick = () => { $("modal").style.display = "none"; };
 $("m-confirm").onclick = () => {
   $("modal").style.display = "none";
@@ -416,6 +423,9 @@ $("set-save").onclick = () => cmd("save_settings", {
     time_stop_candles: Number($("set-timestop").value),
   },
 });
+
+$("shadow-toggle").onclick = () =>
+  cmd("save_settings", { changes: { shadow: !(lastSnap && lastSnap.settings.shadow) } });
 
 $("jfilter").oninput = (e) => { journalFilter = e.target.value.trim();
   if (lastSnap) { delete cache["journal"]; renderJournal(lastSnap); } };

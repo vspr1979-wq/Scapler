@@ -74,7 +74,8 @@ class UIAgent(Agent):
               Topic.RISK_VETO, Topic.ORDER_REQ, Topic.ORDER_FILL,
               Topic.ORDER_REJECTED, Topic.POSITION_UPDATE, Topic.EXIT_TRIGGER,
               Topic.KILL_SWITCH, Topic.AGENT_HEALTH,
-              Topic.WATCHDOG_STATUS, Topic.CONNECTION_STATUS)
+              Topic.WATCHDOG_STATUS, Topic.CONNECTION_STATUS,
+              Topic.SESSION_NEW_DAY)
 
     def __init__(self, bus, settings: Settings, index: str,
                  spot_key: str, index_keys: dict[str, str],
@@ -254,6 +255,13 @@ class UIAgent(Agent):
             self._audit(env, f"kill.switch ({p.source}) → square off + halt "
                              f"entries", "dn")
             return
+        if t == Topic.SESSION_NEW_DAY:
+            self.killed = False
+            self.trades = 0
+            self.pnl = 0.0
+            self.sl_streak = 0
+            self._audit(env, f"new session day {p} → daily counters reset")
+            return
         if t == Topic.WATCHDOG_STATUS:
             self.watchdog = p
             return
@@ -309,7 +317,7 @@ class UIAgent(Agent):
                 self._manual_exit()
             elif name in ("set_mode", "set_index", "set_lots",
                           "save_settings", "broker_save", "broker_connect",
-                          "broker_disconnect", "journal_export"):
+                          "broker_disconnect", "journal_export", "rearm"):
                 cb = self.on_command.get(name)
                 if cb is not None:
                     out = cb(args)
@@ -446,6 +454,7 @@ class UIAgent(Agent):
         planned = [n for n in PLANNED if n not in self.agents]
         return {
             "ts": _ts(), "demo": self.demo, "killed": self.killed,
+            "shadow": bool(cfg.shadow),
             "mode": cfg.mode, "index": self.index,
             "header": {"broker": (self.connection.get("broker")
                                   if self.connection.get("state")
@@ -497,5 +506,6 @@ class UIAgent(Agent):
             "time_stop_candles": c.time_stop_candles,
             "orphan_policy": c.orphan_policy,
             "replay": c.replay,
+            "shadow": c.shadow,
             "steps": dict(c.steps),
         }

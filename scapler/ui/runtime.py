@@ -121,6 +121,7 @@ class ScaplerRuntime:
             "broker_connect": self.cmd_broker_connect,
             "broker_disconnect": self.cmd_broker_disconnect,
             "journal_export": self.cmd_journal_export,
+            "rearm": self.cmd_rearm,
         }
 
     def _replace_cfg(self, **kw) -> None:
@@ -176,7 +177,7 @@ class ScaplerRuntime:
         allowed = {"max_trades_per_day", "max_daily_loss_inr",
                    "sl_streak_stop", "time_stop_candles",
                    "signal_ttl_candles", "stale_feed_s", "reconnect_stale_s",
-                   "square_off"}
+                   "square_off", "shadow"}
         applied = {k: v for k, v in changes.items() if k in allowed}
         skipped = sorted(set(changes) - allowed - {"index"})
         if "index" in changes:                     # route through instant path
@@ -184,10 +185,23 @@ class ScaplerRuntime:
             if not r["ok"]:
                 return r
         if applied:
+            if "shadow" in applied:
+                applied["shadow"] = bool(applied["shadow"])
             self._replace_cfg(**applied)
+            note = ""
+            if "shadow" in applied:
+                # order edge + journal session label follow immediately
+                self.oa.shadow = applied["shadow"]
+                self.jr.shadow = applied["shadow"]
+                note = ("SHADOW ON — orders recorded at real quotes, NOT sent"
+                        if applied["shadow"] else
+                        "SHADOW OFF — LIVE ORDERS will be sent to the broker")
         self._persist()
-        return {"ok": True, "applied": sorted(applied),
-                "restart_required": skipped}
+        out = {"ok": True, "applied": sorted(applied),
+               "restart_required": skipped}
+        if note:
+            out["note"] = note
+        return out
 
     async def cmd_broker_save(self, args: dict) -> dict:
         broker = args.get("broker", "")
@@ -214,6 +228,17 @@ class ScaplerRuntime:
                     "error": "position open on the active broker — "
                              "square off first"}
         return await self.conn.disconnect(broker)
+
+    def cmd_rearm(self, args: dict) -> dict:
+        """Clear a kill/halt once flat (new trading intent, same day)."""
+        if self._open_position():
+            return {"ok": False,
+                    "error": "position open — square off before re-arming"}
+        self.rk.killed = False
+        self.wd.killed = False
+        self.sup.killed = False
+        self.ui.killed = False
+        return {"ok": True, "note": "re-armed — entries allowed again"}
 
     def cmd_journal_export(self, args: dict) -> dict:
         try:
@@ -258,12 +283,12 @@ class ScaplerRuntime:
         # the entry window (DEMO only; live mode uses real IST)
         self.rk = RiskAgent(bus, c,
                             clock_fn=(lambda: "10:30") if self.demo else None)
-        self.oa = OrderAgent(bus, self.broker)
+        self.oa = OrderAgent(bus, self.broker, shadow=c.shadow)
         self.px = PositionExitAgent(bus, c)
         self.conn = ConnectionAgent(bus, c, self.store)
         self.jr = JournalAgent(bus, self.data_dir / "journal.sqlite",
                                broker=self.broker_name, demo=self.demo,
-                               mode=c.mode)
+                               mode=c.mode, shadow=c.shadow)
         self.wd = WatchdogAgent(
             bus, c, clock_fn=(lambda: "10:30") if self.demo else None,
             orphan_check=self.conn.positions)

@@ -16,10 +16,12 @@ class OrderAgent(Agent):
     name = "order"
     topics = (Topic.ORDER_APPROVED, Topic.TICK_RAW)
 
-    def __init__(self, bus, adapter) -> None:
+    def __init__(self, bus, adapter, shadow: bool = False) -> None:
         super().__init__(bus)
         self.adapter = adapter
+        self.shadow = shadow          # SHADOW: no adapter call, real quotes
         self.ltp: dict[str, float] = {}
+        self.quotes: dict[str, tuple[float, float]] = {}   # key → (bid, ask)
         self.open: dict[str, int] = {}
         self._seen: set[str] = set()
 
@@ -30,7 +32,10 @@ class OrderAgent(Agent):
 
     async def on_message(self, env) -> None:
         if env.topic == Topic.TICK_RAW:
-            self.ltp[env.payload.key] = env.payload.ltp
+            tk = env.payload
+            self.ltp[tk.key] = tk.ltp
+            if tk.bid or tk.ask:
+                self.quotes[tk.key] = (tk.bid, tk.ask)
             return
         req = env.payload
         if req.client_id in self._seen:
@@ -45,9 +50,24 @@ class OrderAgent(Agent):
             return
         self.publish(Topic.ORDER_REQ, req)
         t0 = mono_ns()
-        ack = await self.adapter.place_market_order(req)
+        if self.shadow:
+            # SHADOW MODE (plan §12): decisions are real, the adapter edge is
+            # stubbed — fill at the REAL prevailing quote (ask for buys, bid
+            # for sells; LTP fallback when the feed carries no book).
+            from ..brokers.base import OrderAck
+            bid, ask = self.quotes.get(key, (0.0, 0.0))
+            ltp = self.ltp.get(key, 0.0)
+            if req.intent is OrderIntent.BUY_TO_OPEN:
+                price = ask if ask > 0 else ltp
+            else:
+                price = bid if bid > 0 else ltp
+            ack = OrderAck(client_id=req.client_id,
+                           broker_order_id=f"SHADOW-{req.client_id}",
+                           status="SHADOW-FILLED")
+        else:
+            ack = await self.adapter.place_market_order(req)
+            price = self.ltp.get(key, 0.0)
         lat = (mono_ns() - t0) / 1e6
-        price = self.ltp.get(key, 0.0)
         if req.intent is OrderIntent.BUY_TO_OPEN:
             self.open[key] = self.open.get(key, 0) + req.qty
         else:

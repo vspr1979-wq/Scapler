@@ -21,19 +21,26 @@ from ..core.messages import KillSwitch, Topic
 from .base_imports import Agent
 
 
+def _ist_date() -> str:
+    from ..core.clock import ist_now
+    return ist_now().date().isoformat()
+
+
 class WatchdogAgent(Agent):
     name = "watchdog"
     topics = (Topic.TICK_RAW, Topic.KILL_SWITCH)
 
     def __init__(self, bus, settings: Settings, clock_fn=None,
-                 orphan_check=None) -> None:
+                 orphan_check=None, date_fn=None) -> None:
         super().__init__(bus)
         self.cfg = settings
         self._clock = clock_fn or ist_hhmm
+        self._date = date_fn
         self.orphan_check = orphan_check      # async fn() -> list[Position]
         self.reconnects = 0
         self.squared_off = False
         self.killed = False
+        self.session_day = ""
         self._last_tick = 0
         self._last_reconnect = 0.0
         self.feed_latency_ms = 0.0
@@ -65,6 +72,16 @@ class WatchdogAgent(Agent):
                     self.reconnects += 1
                     self.publish(Topic.FEED_RECONNECT,
                                  f"stale {stale_s:.0f}s")
+                today = self._date() if self._date else _ist_date()
+                if self.session_day and today != self.session_day:
+                    # new IST day → daily breakers/session roll everywhere
+                    self.session_day = today
+                    self.squared_off = False
+                    self.killed = False
+                    self.reconnects = 0
+                    self.publish(Topic.SESSION_NEW_DAY, today)
+                elif not self.session_day:
+                    self.session_day = today
                 hhmm = self._clock()
                 if not self.squared_off and hhmm >= self.cfg.square_off \
                         and not self.killed:
