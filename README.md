@@ -14,12 +14,16 @@ ladder, risk guardrails, journal DDL, roadmap.
 Reference mock: `ui_mockup.html` / `ui_mockup.png`.
 
 ## Status
-**Phase 0 complete** (2026-09-22): core runtime (EventBus with priority lane +
-latest-wins coalescing, supervised Agent base, message catalog, settings) and the
-pure strategy core — SideGuard (F2), strike window (F5), no-spam signal state
-machines (F6), T1/T2/T3/SL exit ladder (§6) — all unit-tested (61 tests).
-Bus bench: 565k msg/s, publish→consume p99 0.17 ms, coalesced burst bounded.
-Next: Phase 1 Upstox adapter, Phase 3 indicator/candle agents, Phase 5 UI.
+**Phase 0 + Phase 1 complete** (2026-09-22):
+- Phase 0 — core runtime (EventBus with priority lane + latest-wins coalescing,
+  supervised Agent base, message catalog, settings) and the pure strategy core:
+  SideGuard (F2), strike window (F5), no-spam signal FSMs (F6), T1/T2/T3/SL exit
+  ladder (§6). Bus bench: 565k msg/s, p99 0.17 ms.
+- Phase 1 — Upstox adapter: REST v2 (OAuth/orders/positions), instrument master
+  parser, Streamer v3 protobuf decoder (official vendored schema), feed handle,
+  tick recorder/replayer.
+89 unit tests green. Next: Phase 2 Groww adapter, then Phase 3 candle/indicator
+agents, Phase 4 order/risk/position agents, Phase 5 UI.
 
 ## Dev bootstrap
 ```bash

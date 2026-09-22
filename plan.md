@@ -425,6 +425,14 @@ Scapler/
   (565k msg/s, p99 0.17 ms). Strategy core landed early and fully tested:
   `strategy/setup.py`, `signal_fsm.py` (F6), `strikes.py` (F5), `exits.py` (§6),
   `sideguard.py` (F2). 61 unit tests green.
+- 2026-09-22 — Phase 1 ✅ (code-complete, unit-verified): `brokers/base.py` ABC;
+  Upstox adapter — REST v2 (OAuth token, orders, positions), instrument-master
+  CSV parser (nearest live expiry, lots, OPTIDX-only), **dependency-free
+  protobuf wire decoder** for Streamer v3 against the officially vendored
+  `MarketDataFeedV3.proto`, feed handle (authorize→wss→sub→Ticks, drop-oldest
+  queue), tick recorder/replayer. 89 tests green. Live 1-lot place→cancel
+  remains a Phase-7 go-live checklist item (needs real credentials).
+
 
 
 | Phase | Scope | Exit criteria | Days |
