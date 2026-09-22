@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Algo Scalper — UI Mockup</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0d1117; color: #c9d1d9;
+    font-family: "Segoe UI", sans-serif; font-size: 12px;
+    width: 1180px; padding: 10px;
+  }
+  .mono { font-family: "Cascadia Mono", Consolas, monospace; }
+  .up { color: #3fb950; } .down { color: #f85149; } .dim { color: #8b949e; }
+  .card { background: #161b22; border: 1px solid #30363d; border-radius: 6px; }
+
+  /* Header LTP strip */
+  #header { display: flex; align-items: center; gap: 26px; padding: 8px 14px; }
+  .led { width: 9px; height: 9px; border-radius: 50%; background: #3fb950;
+         display: inline-block; margin-right: 5px; box-shadow: 0 0 6px #3fb950; }
+  .broker { font-weight: 600; color: #e6edf3; }
+  .idx b { color: #e6edf3; }
+  .idx span { font-size: 15px; }
+
+  /* Controls row */
+  #controls { display: flex; align-items: center; gap: 18px; padding: 7px 14px; margin-top: 8px; }
+  .sel { background: #0d1117; border: 1px solid #30363d; border-radius: 4px;
+         padding: 3px 10px; color: #e6edf3; }
+  .radio-on { color: #58a6ff; font-weight: 600; }
+  #kill { margin-left: auto; background: #da3633; color: #fff; border: none;
+          border-radius: 5px; padding: 6px 18px; font-weight: 700; cursor: pointer; }
+
+  /* Main grid */
+  #grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .panel { padding: 8px 12px; }
+  .panel h3 { font-size: 11px; letter-spacing: 1px; color: #8b949e;
+              text-transform: uppercase; margin-bottom: 7px; }
+  .kv { display: flex; justify-content: space-between; padding: 2px 0; }
+  .kv b { color: #e6edf3; }
+
+  /* Signal panel */
+  .sig { display: flex; align-items: center; gap: 10px; padding: 6px 8px;
+         border-radius: 5px; margin-bottom: 6px; }
+  .sig-ce { background: rgba(63,185,80,.08); border: 1px solid #238636; }
+  .sig-pe { background: #0d1117; border: 1px solid #30363d; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-on { background: #3fb950; box-shadow: 0 0 8px #3fb950; }
+  .dot-off { background: #484f58; }
+  .btn { background: #1f6feb; color: #fff; border: none; border-radius: 4px;
+         padding: 5px 16px; font-weight: 600; cursor: pointer; }
+  .btn.gray { background: #21262d; color: #8b949e; }
+
+  /* Strike window */
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; color: #8b949e; font-size: 10px; letter-spacing: 1px;
+       text-transform: uppercase; padding: 2px 6px; }
+  td { padding: 2.5px 6px; font-family: "Cascadia Mono", Consolas, monospace; }
+  tr.hot { background: rgba(88,166,255,.10); }
+  tr.hot td:first-child { color: #58a6ff; font-weight: 700; }
+  tr.hot td:last-child { color: #58a6ff; font-size: 10px; font-weight: 700; }
+
+  /* Position targets */
+  .targets { display: flex; gap: 6px; margin: 8px 0 4px; }
+  .t { flex: 1; text-align: center; padding: 5px 0; border-radius: 4px;
+       background: #21262d; color: #8b949e; font-weight: 600; font-size: 11px; }
+  .t.hit { background: #238636; color: #fff; }
+  .t.sl { background: rgba(248,81,73,.15); color: #f85149; }
+
+  /* Gamma / hero-zero panel */
+  .gz { display: flex; align-items: center; gap: 8px; padding: 5px 8px;
+        border-radius: 5px; margin-top: 5px; }
+  .chip { background: #21262d; border: 1px solid #30363d; border-radius: 4px;
+          padding: 3px 9px; font-family: "Cascadia Mono", Consolas, monospace;
+          white-space: nowrap; }
+  .chip.gold { background: rgba(210,153,34,.14); border-color: #9e6a03;
+               color: #e3b341; font-weight: 700; }
+
+  /* Log + status bar */
+  .log div { padding: 1.5px 4px; border-bottom: 1px solid #21262d; font-size: 11.5px; }
+  .log div:nth-child(odd) { background: #0d1117; }
+  #statusbar { margin-top: 8px; padding: 7px 14px; color: #3fb950; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<div id="header" class="card">
+  <div class="broker"><span class="led"></span>Upstox</div>
+  <div class="idx"><b>NIFTY</b><br><span class="mono up">24,512.30 ▲</span></div>
+  <div class="idx"><b>BANKNIFTY</b><br><span class="mono down">51,203.10 ▼</span></div>
+  <div class="idx"><b>SENSEX</b><br><span class="mono up">80,112.45 ▲</span></div>
+  <div class="dim" style="margin-left:auto">ticks/s 42 &nbsp;|&nbsp; latency 8 ms</div>
+</div>
+
+<div id="controls" class="card">
+  <div>Index &nbsp;<span class="sel">BANKNIFTY ▾</span></div>
+  <div>Expiry &nbsp;<span class="sel">26-Sep-2024 · auto</span></div>
+  <div>Lots &nbsp;<span class="sel">1 ▾ (qty 30)</span></div>
+  <div>Mode &nbsp;<span class="radio-on">● AUTO</span>&nbsp;&nbsp;<span class="dim">○ MANUAL</span></div>
+  <button id="kill">■ KILL SWITCH</button>
+</div>
+
+<div id="grid">
+  <div class="panel card">
+    <h3>Indicator Panel — closed 1-min candles only</h3>
+    <div class="kv"><span class="dim">Last candle</span><b class="mono">10:31 &nbsp;O 51,188 · H 51,236 · L 51,171 · C 51,203</b></div>
+    <div class="kv"><span class="dim">VWAP</span><b class="mono">51,180.20</b></div>
+    <div class="kv"><span class="dim">EMA 9 / EMA 21</span><b class="mono up">51,205.40 / 51,160.10</b></div>
+    <div class="kv"><span class="dim">RSI (14)</span><b class="mono">58.4</b></div>
+    <div class="kv"><span class="dim">ATR (14)</span><b class="mono">22.6</b></div>
+    <div class="kv"><span class="dim">Volume vs 20-avg</span><b class="mono up">1.8×</b></div>
+    <div class="kv"><span class="dim">Setup (CE)</span><b class="up">VALID — close&gt;VWAP · EMA9&gt;EMA21 · RSI&gt;55</b></div>
+    <div class="kv"><span class="dim">Setup (PE)</span><b class="dim">not valid</b></div>
+  </div>
+
+  <div class="panel card">
+    <h3>Signal Panel — one signal per side</h3>
+    <div class="sig sig-ce">
+      <div class="dot dot-on"></div>
+      <div><b class="up">CE · SIGNALED</b><br>
+        <span class="mono">BUY BANKNIFTY 51200 CE @ 148.20</span></div>
+      <button class="btn" style="margin-left:auto">EXECUTE</button>
+    </div>
+    <div class="sig sig-pe">
+      <div class="dot dot-off"></div>
+      <div><b class="dim">PE · IDLE</b><br><span class="dim mono">no setup</span></div>
+      <button class="btn gray" style="margin-left:auto" disabled>EXECUTE</button>
+    </div>
+    <div class="kv"><span class="dim">State machines</span>
+      <b class="mono">CE: SIGNALED &nbsp;|&nbsp; PE: IDLE</b></div>
+    <div class="kv"><span class="dim">Re-arm rule</span>
+      <b class="mono dim">needs setup break on a closed candle</b></div>
+    <div class="kv"><span class="dim">Agents</span><b class="up mono">13 / 13 healthy ●</b></div>
+    <div class="kv"><span class="dim">Today</span><b class="mono">trades 1/3 · SL-streak 0 · P&amp;L <span class="up">+₹207</span></b></div>
+  </div>
+</div>
+
+<div id="grid">
+  <div class="panel card">
+    <h3>Strike Window — 5 ITM + ATM + 5 OTM</h3>
+    <table>
+      <tr><th></th><th>Strike</th><th>Γ</th><th>CE LTP</th><th>PE LTP</th><th></th></tr>
+      <tr class="dim"><td>ITM5</td><td>50700</td><td>0.0008</td><td>548.10</td><td>41.20</td><td></td></tr>
+      <tr class="dim"><td>ITM4</td><td>50800</td><td>0.0014</td><td>472.35</td><td>66.10</td><td></td></tr>
+      <tr class="dim"><td>ITM3</td><td>50900</td><td>0.0022</td><td>401.60</td><td>96.40</td><td></td></tr>
+      <tr class="dim"><td>ITM2</td><td>51000</td><td>0.0031</td><td>336.85</td><td>133.55</td><td>PUT WALL</td></tr>
+      <tr class="dim"><td>ITM1</td><td>51100</td><td>0.0040</td><td>278.40</td><td>176.90</td><td></td></tr>
+      <tr class="hot"><td>ATM</td><td>51200</td><td>0.0045</td><td class="up">148.20 ▲</td><td>245.60</td><td>◀ SELECTED</td></tr>
+      <tr class="dim"><td>OTM1</td><td>51300</td><td>0.0042</td><td>171.05</td><td>268.30</td><td>CALL WALL</td></tr>
+      <tr class="dim"><td>OTM2</td><td>51400</td><td>0.0035</td><td>121.90</td><td>319.75</td><td></td></tr>
+      <tr class="dim"><td>OTM3</td><td>51500</td><td>0.0026</td><td>82.45</td><td>380.10</td><td></td></tr>
+      <tr class="dim"><td>OTM4</td><td>51600</td><td>0.0018</td><td>52.30</td><td>450.55</td><td></td></tr>
+      <tr class="dim"><td>OTM5</td><td>51700</td><td>0.0011</td><td>31.15</td><td>529.40</td><td></td></tr>
+    </table>
+  </div>
+
+  <div class="panel card">
+    <h3>Open Position — long premium only</h3>
+    <div class="kv"><span class="dim">Instrument</span><b class="mono">BANKNIFTY 26-Sep 51200 CE</b></div>
+    <div class="kv"><span class="dim">Qty</span><b class="mono">30 (1 lot)</b></div>
+    <div class="kv"><span class="dim">Avg entry / LTP</span><b class="mono">148.20 / <span class="up">155.10</span></b></div>
+    <div class="kv"><span class="dim">Unrealized P&amp;L</span><b class="mono up">+₹207.00 (+6.9 pts)</b></div>
+    <div class="targets">
+      <span class="t hit">T1 +5 ✓</span><span class="t">T2 +12</span><span class="t">T3 +20</span><span class="t sl">SL −8</span>
+    </div>
+    <div class="kv"><span class="dim">Trail</span><b class="mono">SL → entry (breakeven) after T1</b></div>
+    <div class="kv"><span class="dim">SideGuard</span><b class="mono up">SELL allowed = close-only ✓</b></div>
+    <button class="btn" style="background:#da3633;width:100%;margin-top:8px">EXIT (SELL TO CLOSE)</button>
+  </div>
+</div>
+
+<div class="panel card" style="margin-top:8px">
+  <h3>Gamma Analysis — Hero-Zero Strikes (expiry day)</h3>
+  <div style="display:grid;grid-template-columns:1fr 1.2fr;gap:14px">
+    <div>
+      <div class="kv"><span class="dim">Gamma flip (zero-GEX)</span><b class="mono">51,150</b></div>
+      <div class="kv"><span class="dim">Call wall (max +GEX)</span><b class="mono">51,300</b></div>
+      <div class="kv"><span class="dim">Put wall (max −GEX)</span><b class="mono">51,000</b></div>
+      <div class="kv"><span class="dim">Net GEX regime</span><b class="mono up">POSITIVE — dips bought</b></div>
+      <div class="kv"><span class="dim">Expected move (1σ)</span><b class="mono">±210 pts → 50,990 – 51,410</b></div>
+    </div>
+    <div>
+      <div class="dim" style="margin-bottom:2px">HERO-ZERO CANDIDATES — premium ≤ ₹10, outside 1σ, OI + vol surge</div>
+      <div class="gz" style="background:rgba(210,153,34,.08);border:1px solid #9e6a03">
+        <span class="chip gold">51800 CE @ 8.65</span>
+        <span class="dim mono">γ 0.0041 · OI +2.4L · 2.1× avg vol</span>
+      </div>
+      <div class="gz" style="background:rgba(210,153,34,.08);border:1px solid #9e6a03">
+        <span class="chip gold">50600 PE @ 7.20</span>
+        <span class="dim mono">γ 0.0038 · OI +1.8L · 1.7× avg vol</span>
+      </div>
+      <div class="dim" style="margin-top:6px;font-size:10.5px">Lottery sizing only · auto-disabled when SL-streak ≥ 2 · max 1 hero-zero trade/day</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel card" style="margin-top:8px">
+  <h3>Trade / Signal Log</h3>
+  <div class="log mono">
+    <div><span class="dim">10:31:00.412</span> candle.closed BANKNIFTY 1m</div>
+    <div><span class="dim">10:31:00.428</span> indicators.ready vwap=51180.2 ema9=51205.4 rsi=58.4</div>
+    <div><span class="dim">10:31:00.429</span> gex.update flip=51150 callwall=51300 putwall=51000 regime=POSITIVE</div>
+    <div><span class="dim">10:31:00.430</span> <span style="color:#e3b341">herozero.scan 51800CE@8.65 50600PE@7.20 (≤₹10, outside 1σ)</span></div>
+    <div><span class="dim">10:31:00.431</span> <span class="up">signal.new CE (state IDLE→SIGNALED)</span></div>
+    <div><span class="dim">10:31:00.433</span> strike.selected 51200 CE (ATM, expiry 26-Sep)</div>
+    <div><span class="dim">10:31:00.436</span> order.approved risk-checks pass (trades 1/3)</div>
+    <div><span class="dim">10:31:00.441</span> <span class="up">order.req BUY MARKET 51200 CE qty 30</span> → Upstox v2</div>
+    <div><span class="dim">10:31:00.512</span> order.fill @ 148.20 (71 ms round-trip)</div>
+    <div><span class="dim">10:33:14.020</span> <span class="up">exit T1 hit +5 → SELL 12 (sell-to-close)</span>, SL→breakeven</div>
+  </div>
+</div>
+
+<div id="statusbar" class="card mono">
+  ● WS connected &nbsp;|&nbsp; ticks/s 42 &nbsp;|&nbsp; last candle 10:31:00 &nbsp;|&nbsp; tick→signal 19 ms &nbsp;|&nbsp; feed latency 8 ms &nbsp;|&nbsp; agents 13/13 &nbsp;|&nbsp; RAM 96 MB
+</div>
+
+</body>
+</html>
