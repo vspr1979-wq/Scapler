@@ -30,6 +30,10 @@ class Setup:
 @dataclass(frozen=True)
 class Settings:
     broker_active: str = "upstox"
+    steps: dict[str, float] = field(default_factory=lambda: {
+        "NIFTY": 50.0, "BANKNIFTY": 100.0, "SENSEX": 100.0,
+        "FINNIFTY": 50.0, "MIDCPNIFTY": 25.0,
+    })
     index: str = "BANKNIFTY"
     lot_multiplier: int = 1
     mode: str = "MANUAL"                      # AUTO | MANUAL

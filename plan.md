@@ -466,6 +466,24 @@ Scapler/
   (`tools/run_groww_validation.sh`, read-only) — sandbox egress cannot reach
   groww.in, so it runs on the operator machine and emits fixtures that
   `test_live_fixtures.py` picks up automatically.
+- 2026-09-22 — Phase 4 ✅ : `core/ids.py` (Groww-compatible client ids
+  `SCP-{yyMMdd}-{seq:04d}`, ≤20 chars), `agents/signal.py` (FSM on the bus:
+  AUTO auto-executes, MANUAL waits for `ui.execute`, re-arm only after setup
+  break; POSITION_UPDATE keeps HELD in sync), `agents/strike.py` (owns the
+  5-ITM+ATM+5-OTM window, builds after first spot tick, re-centers on ±2-step
+  drift with `window.rebuilt`, delta-band pick |δ|∈[0.45,0.60] → ATM fallback,
+  qty = master lot × clamp(multiplier,1,10)), `agents/risk.py` (every veto
+  code V_KILL/V_HELD/V_WINDOW/V_MAXTRADES/V_DAILYLOSS/V_SLSTREAK/V_STALE;
+  SELL_TO_CLOSE never vetoed), `agents/order.py` (SideGuard F2 gate,
+  idempotent by client_id, MARKET fills via broker adapter),
+  `agents/position_exit.py` (per-fill tracker: SL → T1 (stop→BE) → T2 → T3,
+  time-stop on candle close, KILL force-close, realized P&L + exit_reason on
+  `position.update`). messages: SIGNAL_EXECUTE/UI_EXECUTE topics,
+  OrderFill.lot_size, PositionUpdate struct; Settings gains exchange step
+  table. `tests/_master.py` + `tests/_broker.py` fixtures; e2e loop test
+  drives spot ticks → one CE signal → BUY 30 → exit ladder sells → HELD
+  released → no second entry. 146 tests green (+2 skipped live-fixture),
+  bus bench still PASS (478k msg/s, p99 0.22 ms).
 
 
 

@@ -21,6 +21,8 @@ class Topic:
     INDICATORS_READY = "indicators.ready"
     SIGNAL_NEW = "signal.new"
     SIGNAL_STATE = "signal.state"
+    SIGNAL_EXECUTE = "signal.execute"      # side payload; AUTO or UI click
+    UI_EXECUTE = "ui.execute"              # MANUAL click from the UI tab
     STRIKE_SELECTED = "strike.selected"
     WINDOW_REBUILT = "window.rebuilt"
     ORDER_REQUEST = "order.request"
@@ -160,6 +162,16 @@ class OrderFill(msgspec.Struct, frozen=True):
     price: float
     latency_ms: float
     ts_mono: int
+    lot_size: int = 0                      # carried for the exit ladder
+
+
+class PositionUpdate(msgspec.Struct, frozen=True):
+    feed_key: str
+    qty_open: int
+    avg_price: float
+    closed: bool
+    exit_reason: str = ""
+    realized_pnl: float = 0.0
 
 
 class OrderRejected(msgspec.Struct, frozen=True):
