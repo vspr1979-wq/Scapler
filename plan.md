@@ -181,11 +181,28 @@ Canonical normalization layer (`brokers/normalize.py`) maps broker-specific symb
 - **Keys:** indices `NSE_INDEX|NIFTY 50`, `NSE_INDEX|Nifty Bank`, `BSE_INDEX|SENSEX`, `NSE_INDEX|NIFTY FIN SERVICE`, `NSE_INDEX|NIFTY MIDCAP SELECT`; options `NSE_FO|<token>` / `BSE_FO|<token>` from the daily instrument-master CSV.
 - **Orders:** `POST /v2/order/place` — `quantity`, `product=MIS`, `validity=DAY`, `order_type=MARKET`, `transaction_type=BUY|SELL`, `tag=scapler`; rate limits respected by OrderAgent token bucket.
 
-### 4.3 Groww (GrowwAPI)
-- **Auth:** OAuth2 via API console (key + secret) → daily access token; `growwapi.GrowwAPI(token)` SDK or raw REST.
-- **Orders:** `POST https://api.groww.in/v1/order/create` with `segment=FNO`, `product=MIS`-equivalent intraday, `order_type=MARKET`, `order_reference_id=<client_id>` (8–20 alnum, ≤2 hyphens). Rate limits: orders 10/s & 250/min; live data 10/s & 300/min → OrderAgent/MarketDataAgent token buckets.
-- **Feed:** Groww WS live-data subscription for the window keys + order-update WS; REST fallback (`/v1/market-data/…`) if WS unavailable. Market-data API exposes greeks/OI where provided → feeds strike pick (§6-F5).
-- **Master:** instruments annexure (daily CSV/endpoint) → `MasterTable`.
+### 4.3 Groww (GrowwAPI) — endpoints verified 2026-09 against official docs
+- **Auth:** `POST /v1/token/api/access` with `{api_key, secret}` (key+secret flow,
+  daily approval) or `{api_key, totp}` (TOTP flow, no expiry); 150 req/24 h →
+  `ConnectionAgent` caches the token. No redirect flow: keys come from the
+  API console (`auth_url()` returns the console page).
+- **Orders:** `POST /v1/order/create` (`segment=FNO`, `product=MIS`,
+  `order_type=MARKET`, `order_reference_id=<client_id>` 8–20 alnum ≤2 hyphens =
+  our idempotency key); cancel `POST /v1/order/cancel {segment, groww_order_id}`;
+  status by id or reference id. Rate limits: orders 10/s & 250/min; live data
+  10/s & 300/min → OrderAgent/MarketDataAgent token buckets.
+- **Master:** `growwapi-assets.groww.in/instruments/instrument.csv`
+  (exchange_token, trading_symbol, instrument_type CE/PE, underlying_symbol,
+  expiry ISO, lot_size, tick_size, buy_allowed) → `MasterTable`.
+- **Feed:** official `growwapi.GrowwFeed` WS client is the preferred transport
+  on Windows; the implemented dependency-free baseline polls
+  `GET /v1/live-data/ltp` (≤50 symbols/call → our 23 keys in 2 calls @4 Hz).
+  Poll mode carries LTP only (no greeks/depth) → strike pick uses the ATM
+  fallback (§6-F5); exits stay tick-driven on those LTPs.
+- **Canonical key unification (Phase 2):** feed keys are `{EXCHANGE}_{SEG}|{token}`
+  on BOTH brokers (`NSE_FO|11`, `NSE_INDEX|NIFTY`) → the same contract has the
+  same key shape everywhere; Groww order bodies derive `exchange`/`segment`
+  from it (`NSE_FO` → `NSE` + `FNO`).
 
 ### 4.4 Broker policy
 - **One active broker at a time** (selected in Settings/controls). Switching requires a flat position (enforced by Risk).
@@ -432,6 +449,11 @@ Scapler/
   `MarketDataFeedV3.proto`, feed handle (authorize→wss→sub→Ticks, drop-oldest
   queue), tick recorder/replayer. 89 tests green. Live 1-lot place→cancel
   remains a Phase-7 go-live checklist item (needs real credentials).
+- 2026-09-22 — Phase 2 ✅ : Groww adapter (REST v1: token/order/cancel/positions/
+  ltp-batch/quote, instrument.csv parser, poll feed handle) + **cross-broker
+  parity suite** (same market on both wires → identical canonical expiries,
+  lots, strikes, order semantics, position qty/avg, tick prices; unified
+  `{EX}_{SEG}|token` feed keys). 111 tests green.
 
 
 
