@@ -454,6 +454,18 @@ Scapler/
   parity suite** (same market on both wires → identical canonical expiries,
   lots, strikes, order semantics, position qty/avg, tick prices; unified
   `{EX}_{SEG}|token` feed keys). 111 tests green.
+- 2026-09-22 — Phase 3 ✅ : `agents/market_data.py` (feed handle owner, ticks/s,
+  staleness), `agents/candle.py` (closed-1m-bars only: next-tick close + wall-
+  clock quiet-flush, late-tick drop, cumulative-volume deltas with tick-activity
+  proxy for volume-less index feeds), `agents/indicator.py` +
+  `strategy/indicators.py` (incremental VWAP/EMA9/21/RSI14-Wilder/ATR14/vol×,
+  neutral warm-up constants that gates reject). Chain integration test proves
+  ticks→candles→indicators→setup→FSM emits exactly ONE signal per trending
+  episode; indicators match pandas (EMA/VWAP) + textbook loop to 1e-9.
+  123 tests green. Live Groww validation tool added
+  (`tools/run_groww_validation.sh`, read-only) — sandbox egress cannot reach
+  groww.in, so it runs on the operator machine and emits fixtures that
+  `test_live_fixtures.py` picks up automatically.
 
 
 

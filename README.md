@@ -24,8 +24,17 @@ Reference mock: `ui_mockup.html` / `ui_mockup.png`.
 - Phase 2 — Groww adapter: REST v1 (token/orders/cancel/positions/ltp-batch),
   instrument.csv parser, poll feed handle, cross-broker parity suite, unified
   canonical feed keys (`NSE_FO|token` on both brokers).
-111 unit tests green. Next: Phase 3 candle/indicator agents on the bus,
-Phase 4 order/risk/position agents, Phase 5 UI (text-only, zero charts).
+123 unit tests green. Next: Phase 4 order/risk/position agents on the bus,
+Phase 5 UI (text-only, zero charts), Phase 6 journal/watchdog/packaging,
+Phase 7 shadow run + go-live.
+
+### Live validation (operator machine)
+The sandbox cannot reach broker hosts. On a machine with network access:
+```bash
+GROWW_API_KEY=… GROWW_API_SECRET=… bash tools/run_groww_validation.sh
+```
+Read-only (token, master, LTPs, historical candles, positions — never orders).
+It writes `tests/fixtures/groww_*` which activate `test_live_fixtures.py`.
 
 ## Dev bootstrap
 ```bash

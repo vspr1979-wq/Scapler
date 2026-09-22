@@ -106,6 +106,18 @@ class GrowwRest:
             raise RuntimeError(f"groww quote failed: {status}")
         return self._payload(orjson.loads(raw))
 
+    async def candles(self, exchange: str, segment: str, trading_symbol: str,
+                      start: str, end: str, interval: int = 1) -> list[list]:
+        """GET /v1/historical/candle/range → [[epoch_s, o, h, l, c, vol], …]."""
+        status, raw = await self._authed(
+            "GET", "/v1/historical/candle/range",
+            params={"exchange": exchange, "segment": segment,
+                    "trading_symbol": trading_symbol, "start_time": start,
+                    "end_time": end, "interval_in_minutes": str(interval)})
+        if status != 200:
+            raise RuntimeError(f"groww candles failed: {status}")
+        return self._payload(orjson.loads(raw)).get("candles", [])
+
     # ── master ──────────────────────────────────────────────────────
     async def master_bytes(self) -> bytes:
         status, body = await self.http.request("GET", INSTRUMENT_CSV)
