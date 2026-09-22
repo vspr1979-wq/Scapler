@@ -172,6 +172,9 @@ class PositionUpdate(msgspec.Struct, frozen=True):
     closed: bool
     exit_reason: str = ""
     realized_pnl: float = 0.0
+    t1_hit: bool = False               # ladder state for the UI position panel
+    t2_hit: bool = False
+    sl_price: float = 0.0              # live (trailed) stop premium
 
 
 class OrderRejected(msgspec.Struct, frozen=True):

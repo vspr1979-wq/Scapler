@@ -24,9 +24,12 @@ Reference mock: `ui_mockup.html` / `ui_mockup.png`.
 - Phase 2 — Groww adapter: REST v1 (token/orders/cancel/positions/ltp-batch),
   instrument.csv parser, poll feed handle, cross-broker parity suite, unified
   canonical feed keys (`NSE_FO|token` on both brokers).
-146 unit tests green (+2 skipped live-fixture). Next: Phase 5 UI (text-only,
-zero charts), Phase 6 journal/watchdog/packaging, Phase 7 shadow run +
-go-live.
+150 unit tests green (+2 skipped live-fixture). Phase 5 UI is up: text-only
+dark theme, zero charts, TRADE/SETTINGS/JOURNAL/AGENTS tabs, global KILL
+SWITCH, pywebview/WebView2 desktop path + aiohttp dev preview
+(`python -m scapler.ui --dev --demo` — labelled synthetic fixtures, stub
+broker, no real orders). Next: Phase 6 journal/watchdog/packaging,
+Phase 7 shadow run + go-live.
 
 ### Live validation (operator machine)
 The sandbox cannot reach broker hosts. On a machine with network access:

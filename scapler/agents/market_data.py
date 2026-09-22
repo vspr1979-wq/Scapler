@@ -15,7 +15,7 @@ from .base_imports import Agent
 
 class MarketDataAgent(Agent):
     name = "market_data"
-    topics: tuple[str, ...] = ()
+    topics: tuple[str, ...] = (Topic.WINDOW_REBUILT,)
 
     def __init__(self, bus, adapter, keys: list[str], mode: str = "full") -> None:
         super().__init__(bus)
@@ -32,6 +32,15 @@ class MarketDataAgent(Agent):
     async def on_start(self) -> None:
         self.handle = await self.adapter.open_feed(self.keys, self.mode)
         self._pump = asyncio.get_running_loop().create_task(self._run())
+
+    async def on_message(self, env) -> None:
+        # window.rebuilt (plan §3.2): adopt the strike-window footprint —
+        # hot-resubscribe when the adapter supports it, else next reconnect.
+        if env.topic == Topic.WINDOW_REBUILT:
+            self.keys = list(env.payload["keys"])
+            update = getattr(self.adapter, "update_subs", None)
+            if update is not None and self.handle is not None:
+                await update(self.keys)
 
     async def _run(self) -> None:
         async for tick in self.handle:

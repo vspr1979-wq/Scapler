@@ -32,7 +32,11 @@ async def test_window_build_and_subscription_footprint():
     await asyncio.sleep(0.05)
     assert a.window is not None and a.window.center == 51200.0
     assert len(a.sub_keys) == 23                      # spot + 22 options
-    assert out.depth() == 0                           # first build is silent
+    rb = (await out.get()).payload                    # first build announced
+    assert rb["center"] == 51200.0 and len(rb["keys"]) == 23
+    assert rb["strikes"][0] == 50700.0 and rb["step"] == 100.0
+    assert ("NSE_FO|51200C" in rb["map"]
+            and rb["map"]["NSE_FO|51200C"] == [51200.0, "CE"])
     await a.stop()
 
 
@@ -46,7 +50,7 @@ async def test_delta_band_pick_and_order_request():
     await asyncio.sleep(0.05)
     bus.publish(Topic.SIGNAL_EXECUTE, OT.CE)
     await asyncio.sleep(0.05)
-    envs = [await out.get(), await out.get()]      # ORDER_REQUEST is priority lane
+    envs = [await out.get() for _ in range(3)]     # rebuild + sel + req
     sel = next(e.payload for e in envs if e.topic == Topic.STRIKE_SELECTED)
     req = next(e.payload for e in envs if e.topic == Topic.ORDER_REQUEST)
     assert sel.instrument.strike == 51200.0 and sel.side is OT.CE     # 0.44 out of band
@@ -64,7 +68,7 @@ async def test_lot_multiplier_capped_1_10():
     await asyncio.sleep(0.05)
     bus.publish(Topic.SIGNAL_EXECUTE, OT.CE)
     await asyncio.sleep(0.05)
-    envs = [await out.get(), await out.get()]
+    envs = [await out.get() for _ in range(3)]
     req = next(e.payload for e in envs if e.topic == Topic.ORDER_REQUEST)
     assert req.qty == 90
     await a.stop()
@@ -74,6 +78,7 @@ async def test_recenter_on_two_step_drift():
     bus, out, a = await _agent(master=make_master(radius=10))
     bus.publish(Topic.TICK_RAW, Tick(key=SK, exch_ts_ns=0, ltp=51203.0), key=SK)
     await asyncio.sleep(0.05)
+    await out.get()                                 # initial build announced
     bus.publish(Topic.TICK_RAW, Tick(key=SK, exch_ts_ns=0, ltp=51399.0), key=SK)
     await asyncio.sleep(0.05)
     assert a.window.center == 51200.0 and out.depth() == 0

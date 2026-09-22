@@ -57,7 +57,13 @@ async def test_open_then_t1_trails_no_partial_for_one_lot():
     assert pu.qty_open == 30 and not pu.closed
     bus.publish(Topic.TICK_RAW, tick(153.2))          # T1 hit
     await asyncio.sleep(0.05)
-    assert out.depth() == 0                            # no partial, SL→BE
+    # no partial sell for N=1 lot — but the trail change is announced so the
+    # UI position panel shows T1 ✓ / SL=BE live
+    env = await asyncio.wait_for(out.get(), 1)
+    assert env.topic == Topic.POSITION_UPDATE
+    assert env.payload.t1_hit is True and env.payload.sl_price == 148.2
+    assert env.payload.qty_open == 30 and not env.payload.closed
+    assert out.depth() == 0                            # nothing else published
     assert a.trackers[KEY].sl_price == 148.2
     await a.stop()
 
@@ -131,4 +137,28 @@ async def test_kill_force_close():
     bus.publish(Topic.KILL_SWITCH, "ui")
     r = (await _drain_reqs(out, 1))[0]
     assert r.qty == 30
+    await a.stop()
+
+
+async def test_manual_exit_reason_from_ui_trigger():
+    """UI EXIT button: ExitTrigger(MANUAL) stamps the close reason; the UI's
+    own SELL_TO_CLOSE request produces the fill that closes the tracker."""
+    from scapler.core.messages import ExitTrigger
+    bus, out, a = await _px()
+    bus.publish(Topic.ORDER_FILL, buy())
+    await asyncio.wait_for(out.get(), 1)
+    bus.publish(Topic.EXIT_TRIGGER, ExitTrigger(
+        reason=ExitReason.MANUAL, instrument=IK, qty=30, ref_price=150.0))
+    await asyncio.sleep(0.05)
+    assert KEY not in a._reason or a._reason[KEY] is ExitReason.MANUAL
+    bus.publish(Topic.ORDER_FILL, sell(150.0))
+    closed = None
+    while True:
+        env = await asyncio.wait_for(out.get(), 1)
+        if env.topic == Topic.POSITION_UPDATE and env.payload.closed:
+            closed = env.payload
+            break
+    assert closed.exit_reason == "MANUAL"
+    assert closed.realized_pnl == (150.0 - 148.2) * 30
+    assert KEY not in a.trackers
     await a.stop()

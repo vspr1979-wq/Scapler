@@ -55,10 +55,14 @@ class StrikeAgent(Agent):
                     self.key_map[meta.instrument.feed_key] = (strike, opt)
                     keys.append(meta.instrument.feed_key)
         self.sub_keys = keys
-        if not force:
-            self.publish(Topic.WINDOW_REBUILT,
-                         {"index": self.index, "center": self.window.center,
-                          "keys": keys})
+        # always announce (first build included): MarketData resubscribes and
+        # the UI strike-window panel renders from this payload.
+        self.publish(Topic.WINDOW_REBUILT,
+                     {"index": self.index, "center": self.window.center,
+                      "keys": keys, "step": self._step(),
+                      "strikes": list(self.window.strikes),
+                      "map": {fk: [s, o.value]
+                              for fk, (s, o) in self.key_map.items()}})
         return True
 
     def _step(self) -> float:

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SCAPLER — index options scalper</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<!-- demo/replay banner (only visible when snapshot.demo) -->
+<div id="banner-demo" style="display:none">
+  <b>■ DEMO MODE — SYNTHETIC FIXTURE DATA · STUB BROKER · NO REAL ORDERS.</b>
+  This feed is generated locally for UI development; it is not market data and
+  cannot arm live trading. Live mode requires broker credentials (Phase 6).
+</div>
+<div id="banner-replay" style="display:none">
+  <b>■ REPLAY</b> — recorded real ticks. Replay can never arm the Signal agent
+  in live mode.
+</div>
+
+<!-- ══════════ GLOBAL HEADER STRIP ══════════ -->
+<div id="header" class="card">
+  <div class="broker"><span class="led off" id="brokerled"></span><span id="brokername">—</span></div>
+  <div class="idx"><b>NIFTY</b><br><span class="mono" id="ltp-NIFTY">—</span></div>
+  <div class="idx"><b>BANKNIFTY</b><br><span class="mono" id="ltp-BANKNIFTY">—</span></div>
+  <div class="idx"><b>SENSEX</b><br><span class="mono" id="ltp-SENSEX">—</span></div>
+  <div class="dim mono" style="margin-left:auto">
+    ticks/s <span id="tickrate">0</span> &nbsp;|&nbsp; <span id="clock">--:--:--</span>
+  </div>
+</div>
+
+<!-- ══════════ GLOBAL CONTROLS ROW ══════════ -->
+<div id="controls" class="card">
+  <div>Index
+    <select class="sel" id="idxsel">
+      <option>NIFTY</option><option selected>BANKNIFTY</option><option>SENSEX</option>
+      <option>FINNIFTY</option><option>MIDCPNIFTY</option>
+    </select>
+  </div>
+  <div>Expiry <span class="sel mono" id="expiry">—</span></div>
+  <div>Lots
+    <span class="sel mono"><button class="step" id="lot-minus">−</button>
+      <span id="lots">1</span>
+      <button class="step" id="lot-plus">+</button> (qty <span id="qty">—</span>)</span>
+  </div>
+  <div>Mode
+    <span class="radio" id="m-auto">○ AUTO</span>&nbsp;
+    <span class="radio on" id="m-manual">● MANUAL</span>
+  </div>
+  <button id="kill">■ KILL SWITCH</button>
+</div>
+
+<!-- ══════════ TABS ══════════ -->
+<div id="tabs">
+  <button class="on" data-tab="trade">TRADE</button>
+  <button data-tab="settings">SETTINGS</button>
+  <button data-tab="journal">JOURNAL</button>
+  <button data-tab="agents">AGENTS</button>
+</div>
+
+<!-- ─────────────────────────── TRADE TAB ─────────────────────────── -->
+<div class="tabbody" id="tab-trade">
+  <div class="grid2" style="margin-top:0">
+    <div class="panel card">
+      <h3>Indicator Panel — closed 1-min candles only <span class="badge">F7</span></h3>
+      <div class="kv"><span class="dim">Last candle</span><b class="mono" id="ind-candle">waiting for first closed candle…</b></div>
+      <div class="kv"><span class="dim">VWAP (session)</span><b class="mono" id="ind-vwap">—</b></div>
+      <div class="kv"><span class="dim">EMA 9 / EMA 21</span><b class="mono" id="ind-ema">—</b></div>
+      <div class="kv"><span class="dim">RSI (14)</span><b class="mono" id="ind-rsi">—</b></div>
+      <div class="kv"><span class="dim">ATR (14)</span><b class="mono" id="ind-atr">—</b></div>
+      <div class="kv"><span class="dim">Volume vs 20-avg</span><b class="mono" id="ind-vol">—</b></div>
+      <div class="kv"><span class="dim">Setup (CE)</span><b id="ind-setup-ce" class="dim">waiting…</b></div>
+      <div class="kv"><span class="dim">Setup (PE)</span><b id="ind-setup-pe" class="dim">waiting…</b></div>
+    </div>
+
+    <div class="panel card">
+      <h3>Signal Panel — one signal per side <span class="badge">F1</span><span class="badge">F6</span></h3>
+      <div class="sig idle" id="sigrow-CE">
+        <div class="dot off" id="sigdot-CE"></div>
+        <div><b class="dim" id="sigstate-CE">CE · DISARMED</b><br>
+          <span class="mono dim" id="sigline-CE">no setup — waiting for closed candle</span></div>
+        <button class="btn gray" id="exec-CE" style="margin-left:auto" disabled>EXECUTE</button>
+      </div>
+      <div class="sig idle" id="sigrow-PE">
+        <div class="dot off" id="sigdot-PE"></div>
+        <div><b class="dim" id="sigstate-PE">PE · DISARMED</b><br>
+          <span class="mono dim" id="sigline-PE">no setup — waiting for closed candle</span></div>
+        <button class="btn gray" id="exec-PE" style="margin-left:auto" disabled>EXECUTE</button>
+      </div>
+      <div class="kv"><span class="dim">Re-arm rule</span><b class="mono dim">DISARMED → break candle → ARMED → valid candle → SIGNALED</b></div>
+      <div class="kv"><span class="dim">Signal TTL</span><b class="mono dim" id="sig-ttl">3 closed candles, then needs break</b></div>
+      <div class="kv"><span class="dim">Agents</span><b class="up mono" id="sig-agents">— / —</b></div>
+      <div class="kv"><span class="dim">Today</span><b class="mono" id="sig-today">trades 0/3 · SL-streak 0 · P&amp;L ₹0</b></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel card">
+      <h3>Strike Window — 5 ITM + ATM + 5 OTM <span class="badge">F5</span></h3>
+      <table>
+        <thead><tr><th></th><th>Strike</th><th>Γ</th><th>CE LTP</th><th>PE LTP</th><th></th></tr></thead>
+        <tbody id="window-body">
+          <tr><td colspan="6" class="dim">waiting for spot tick…</td></tr>
+        </tbody>
+      </table>
+      <div class="dim" style="margin-top:6px;font-size:10.5px">
+        re-center on ±2 steps drift · 22 option subs + spots only ·
+        pick = |δ| ∈ [0.45,0.60] + spread ≤ 2 ticks, else ATM
+      </div>
+    </div>
+
+    <div class="panel card">
+      <h3>Open Position — long premium only <span class="badge">F2</span></h3>
+      <div id="pos-empty" class="dim" style="padding:18px 4px">FLAT — no open position. Entries only via BUY CE/PE; exits are SELL to close this long only (never sell-to-open).</div>
+      <div id="pos-body" style="display:none">
+        <div class="kv"><span class="dim">Instrument</span><b class="mono" id="pos-inst">—</b></div>
+        <div class="kv"><span class="dim">Qty</span><b class="mono" id="pos-qty">—</b></div>
+        <div class="kv"><span class="dim">Avg entry / LTP</span><b class="mono" id="pos-avg">—</b></div>
+        <div class="kv"><span class="dim">Unrealized P&amp;L</span><b class="mono" id="pos-upnl">—</b></div>
+        <div class="targets">
+          <span class="t" id="t-t1">T1 +5</span><span class="t" id="t-t2">T2 +12</span>
+          <span class="t" id="t-t3">T3 +20</span><span class="t sl" id="t-sl">SL −8</span>
+        </div>
+        <div class="kv"><span class="dim">Trail</span><b class="mono" id="pos-trail">—</b></div>
+        <div class="kv"><span class="dim">Live SL</span><b class="mono" id="pos-sl">—</b></div>
+        <div class="kv"><span class="dim">Time-stop</span><b class="mono dim" id="pos-time">—</b></div>
+        <div class="kv"><span class="dim">SideGuard</span><b class="mono up">SELL allowed = close-only ✓</b></div>
+        <button class="btn red" id="exit-btn" style="width:100%;margin-top:8px">EXIT (SELL TO CLOSE)</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel card" style="margin-top:8px">
+    <h3>Trade / Signal Log — EventBus choreography <span class="badge">F9</span></h3>
+    <div class="log mono" id="log"><div class="dim">waiting for events…</div></div>
+  </div>
+</div>
+
+<!-- ─────────────────────────── SETTINGS TAB ─────────────────────────── -->
+<div class="tabbody" id="tab-settings" style="display:none">
+  <div class="grid2" style="margin-top:0">
+    <div>
+      <div class="panel card brokercard">
+        <h4><span class="led off" id="led-upstox"></span>Upstox — API v2 + Streamer v3 <span class="badge">F3</span>
+          <span class="dim" id="active-upstox" style="font-weight:400"></span></h4>
+        <div class="fieldrow"><span class="dim">API key</span><input id="up-key" type="password" placeholder="api key" autocomplete="off"><span class="dim mono">memory</span></div>
+        <div class="fieldrow"><span class="dim">API secret</span><input id="up-secret" type="password" placeholder="api secret" autocomplete="off"><span class="dim mono">memory</span></div>
+        <div class="fieldrow"><span class="dim">Redirect URI</span><input id="up-redirect" value="https://localhost/oauth"><span class="dim mono">saved</span></div>
+        <div class="btnrow">
+          <button class="btn sm ghost" data-broker-save="upstox">SAVE</button>
+          <button class="btn sm" data-broker-connect="upstox">CONNECT</button>
+          <button class="btn sm ghost" data-broker-disconnect="upstox">DISCONNECT</button>
+        </div>
+        <div class="kv" style="margin-top:6px"><span class="dim">Status</span><b class="dim mono" id="up-status">not connected — live wiring lands Phase 6</b></div>
+      </div>
+      <div class="panel card brokercard">
+        <h4><span class="led off" id="led-groww"></span>Groww — GrowwAPI v1 <span class="badge">F3</span>
+          <span class="dim" id="active-groww" style="font-weight:400"></span></h4>
+        <div class="fieldrow"><span class="dim">API key</span><input id="gr-key" type="password" placeholder="api key" autocomplete="off"><span class="dim mono">memory</span></div>
+        <div class="fieldrow"><span class="dim">API secret</span><input id="gr-secret" type="password" placeholder="api secret" autocomplete="off"><span class="dim mono">memory</span></div>
+        <div class="fieldrow"><span class="dim">TOTP (optional)</span><input id="gr-totp" type="password" placeholder="2FA secret" autocomplete="off"><span class="dim mono">memory</span></div>
+        <div class="btnrow">
+          <button class="btn sm ghost" data-broker-save="groww">SAVE</button>
+          <button class="btn sm" data-broker-connect="groww">CONNECT</button>
+          <button class="btn sm ghost" data-broker-disconnect="groww">DISCONNECT</button>
+        </div>
+        <div class="kv" style="margin-top:6px"><span class="dim">Status</span><b class="dim mono" id="gr-status">not connected — live wiring lands Phase 6</b></div>
+        <div class="dim" style="margin-top:6px;font-size:10.5px">
+          secrets are held in memory only this phase; DPAPI-encrypted at rest
+          lands with Phase 6 packaging. One active broker at a time; switching
+          requires flat.
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="panel card">
+        <h3>Risk / session <span class="badge">F8</span></h3>
+        <div class="fieldrow2"><span class="dim">Max trades / day</span><input class="num mono" id="set-maxtrades" type="number" min="1" max="10"></div>
+        <div class="fieldrow2"><span class="dim">Max daily loss (₹)</span><input class="num mono" id="set-maxloss" type="number" min="0"></div>
+        <div class="fieldrow2"><span class="dim">SL-streak stop</span><input class="num mono" id="set-slstreak" type="number" min="1"></div>
+        <div class="fieldrow2"><span class="dim">Stale feed (s)</span><input class="num mono" id="set-stale" type="number" min="1"></div>
+        <div class="fieldrow2"><span class="dim">Reconnect stale (s)</span><input class="num mono" id="set-reconnect" type="number" min="5"></div>
+        <div class="fieldrow2"><span class="dim">Signal TTL (candles)</span><input class="num mono" id="set-ttl" type="number" min="0"></div>
+        <div class="fieldrow2"><span class="dim">Time-stop (candles)</span><input class="num mono" id="set-timestop" type="number" min="1"></div>
+        <div class="kv"><span class="dim">Entry window</span><b class="mono" id="set-window">—</b></div>
+        <div class="kv"><span class="dim">Square-off</span><b class="mono" id="set-squareoff">—</b></div>
+        <div class="kv"><span class="dim">Targets T1/T2/T3/SL</span><b class="mono" id="set-targets">—</b></div>
+        <div class="kv"><span class="dim">Orphan position</span><b class="mono" id="set-orphan">—</b></div>
+        <div class="kv"><span class="dim">Replay mode</span><b class="mono dn" id="set-replay">OFF (live only)</b></div>
+        <div class="btnrow"><button class="btn sm" id="set-save">SAVE RISK SETTINGS</button></div>
+      </div>
+      <div class="panel card" style="margin-top:8px">
+        <h3>Contracts <span class="badge">F4</span></h3>
+        <table>
+          <thead><tr><th>Index</th><th>Step</th><th>Lot</th><th>Source</th></tr></thead>
+          <tbody id="contracts-body"></tbody>
+        </table>
+        <div class="dim" style="margin-top:6px;font-size:10.5px">
+          expiry = nearest live expiry from instrument master (never a
+          hardcoded weekday) · lot multiplier 1–10 · master is source of
+          truth, table sanity-checks it
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────── JOURNAL TAB ─────────────────────────── -->
+<div class="tabbody" id="tab-journal" style="display:none">
+  <div class="panel card">
+    <h3>Audit journal — session events <span class="badge">F9</span>
+      <span style="float:right;display:flex;gap:6px;align-items:center">
+        <input id="jfilter" class="sel mono" placeholder="filter topic…" style="width:160px">
+        <button class="btn sm ghost" id="jexport">EXPORT CSV</button>
+      </span>
+    </h3>
+    <table>
+      <thead><tr><th>seq</th><th>ts (IST)</th><th>topic</th><th>agent</th><th>detail</th></tr></thead>
+      <tbody id="journal-body"><tr><td colspan="5" class="dim">no events yet</td></tr></tbody>
+    </table>
+    <div class="dim" style="margin-top:6px;font-size:10.5px">
+      in-memory this phase (last 500 events) · SQLite WAL write-ahead journal
+      lands Phase 6 · CSV export includes the full in-memory buffer
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────── AGENTS TAB ─────────────────────────── -->
+<div class="tabbody" id="tab-agents" style="display:none">
+  <div class="panel card">
+    <h3>Agent health — asyncio agents, EventBus only <span class="badge">F10</span></h3>
+    <table>
+      <thead><tr><th>agent</th><th>job</th><th>state</th><th>up</th><th>restarts</th><th>inbox</th><th>p99 lag</th><th>beat</th></tr></thead>
+      <tbody id="agents-body"></tbody>
+    </table>
+    <div class="panel card" style="margin-top:8px;padding:6px 10px">
+      <h3 style="margin-bottom:4px">Bus rates (published)</h3>
+      <div class="mono dim" id="busrates">—</div>
+    </div>
+    <div class="dim" style="margin-top:6px;font-size:10.5px">
+      tick.raw is latest-wins coalesced · order/kill topics ride the priority
+      lane · crashed agents restart with backoff (supervisor visible here) ·
+      connection/watchdog/journal agents land Phase 6
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ GLOBAL STATUS BAR ══════════ -->
+<div id="statusbar" class="card mono">starting…</div>
+
+<!-- toast -->
+<div id="toast" style="display:none"></div>
+
+<!-- kill-switch modal -->
+<div id="modal"><div class="box card">
+  <h4>■ KILL SWITCH</h4>
+  <p>Cancel all pending orders, <b>square off the open position at MARKET</b>
+     (sell-to-close), and block all new entries until re-armed. This can never
+     short anything.</p>
+  <div style="display:flex;gap:8px;justify-content:flex-end">
+    <button class="btn ghost sm" id="m-cancel">CANCEL</button>
+    <button class="btn red sm" id="m-confirm">KILL &amp; SQUARE OFF</button>
+  </div>
+</div></div>
+
+<script src="app.js"></script>
+</body>
+</html>

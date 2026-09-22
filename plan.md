@@ -484,6 +484,32 @@ Scapler/
   drives spot ticks → one CE signal → BUY 30 → exit ladder sells → HELD
   released → no second entry. 146 tests green (+2 skipped live-fixture),
   bus bench still PASS (478k msg/s, p99 0.22 ms).
+- 2026-09-22 — Phase 5 ✅ : UI shell per approved `mock.html` (text-only,
+  dark GitHub theme, zero charts, monospace tabular numerals). New agents:
+  `agents/ui.py` (#12 — subscribes to every UI-relevant topic, derives
+  counters/positions from bus events, coalesced snapshots at 10 Hz on
+  `ui.snapshot`, JS commands → bus: execute/kill/exit_position/set_mode/
+  set_lots/save_settings/broker_*), `agents/supervisor.py` (#13 — 1 Hz
+  `agent.health` fan-out for the Agents tab; full crash-injection &
+  watchdog orchestration stay Phase 6). Frontend `scapler/ui/web/`
+  (index.html/app.css/app.js): global header LTP strip + controls row +
+  KILL SWITCH modal reachable from every tab; TRADE (Indicator/Signal/
+  Strike-Window/Open-Position/Log panels), SETTINGS (broker cards, risk
+  table, contracts), JOURNAL (filter + CSV export, in-memory until Phase 6
+  SQLite), AGENTS (health table + bus rates). Transports: pywebview/WebView2
+  js_api + evaluate_js (desktop, no HTTP) and an aiohttp dev server
+  (WS snapshots + POST /api/cmd) for operator-browser preview.
+  `scapler/ui/runtime.py` wires the 10-agent stack; `--demo` runs a clearly
+  labelled synthetic 60-min day (chained future minute grids, ATM±2 quotes,
+  StubBroker) — demo banner + stub fills, never live. Backend support:
+  `window.rebuilt` now announced on first build with strikes/map/step and
+  consumed by MarketData (resub footprint); `position.update` carries
+  t1_hit/t2_hit/sl_price (trail changes announced between fills);
+  ExitTrigger(MANUAL) from the UI closes the tracker (reason MANUAL).
+  Validated live over the dev server: 8 trades/60 s, delta-band picks on
+  both sides, T1/T2 trail flags + BE ratchet visible, T3/SL/TIME_STOP
+  exits, EXIT button → SELL_TO_CLOSE fill → flat, KILL → force square-off
+  + EXECUTE disabled. 150 tests green (+2 skipped), bench PASS.
 
 
 

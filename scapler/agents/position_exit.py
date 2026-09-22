@@ -18,7 +18,7 @@ from .base_imports import Agent
 class PositionExitAgent(Agent):
     name = "position_exit"
     topics = (Topic.ORDER_FILL, Topic.TICK_RAW, Topic.KILL_SWITCH,
-              Topic.CANDLE_CLOSED)
+              Topic.CANDLE_CLOSED, Topic.EXIT_TRIGGER)
 
     def __init__(self, bus, settings: Settings) -> None:
         super().__init__(bus)
@@ -26,6 +26,7 @@ class PositionExitAgent(Agent):
         self.trackers: dict[str, PositionExitTracker] = {}
         self.realized: dict[str, float] = {}
         self._reason: dict[str, ExitReason] = {}
+        self._ui_state: dict[str, tuple] = {}
         self._candles_open = 0
 
     # ── helpers ─────────────────────────────────────────────────────
@@ -46,11 +47,25 @@ class PositionExitAgent(Agent):
             closed=closed or tracker.closed,
             exit_reason=self._reason.get(key, ExitReason.T3).value
             if tracker.closed else "",
-            realized_pnl=self.realized.get(key, 0.0)))
+            realized_pnl=self.realized.get(key, 0.0),
+            t1_hit=tracker.t1_hit, t2_hit=tracker.t2_hit,
+            sl_price=tracker.sl_price))
 
     # ── messages ────────────────────────────────────────────────────
     async def on_message(self, env) -> None:
         t = env.topic
+        if t == Topic.EXIT_TRIGGER:
+            # echo of our own triggers except MANUAL exits raised by the UI —
+            # those close the tracker here; the UI sends the SELL request
+            # itself (Risk auto-approves, SideGuard validates the long).
+            p = env.payload
+            if p.reason is ExitReason.MANUAL:
+                key = p.instrument.feed_key
+                tr = self.trackers.get(key)
+                if tr is not None:
+                    self._reason[key] = ExitReason.MANUAL
+                    tr.force_close(ExitReason.MANUAL, p.ref_price)
+            return
         if t == Topic.CANDLE_CLOSED:
             if self.trackers:
                 self._candles_open += 1
@@ -77,6 +92,12 @@ class PositionExitAgent(Agent):
                 self._ltp = {}
             self._ltp[tick.key] = tick.ltp
             self._exit_requests(tick.key, tr, tr.on_tick(tick.ltp))
+            # trail-state change (T1/T2 hit, SL ratcheted) → announce so the
+            # UI position panel shows live ladder state between fills
+            sig = (tr.t1_hit, tr.t2_hit, tr.sl_price)
+            if not tr.closed and self._ui_state.get(tick.key) != sig:
+                self._ui_state[tick.key] = sig
+                self._update(tick.key, tr)
             return
         # ORDER_FILL
         f = env.payload
@@ -87,6 +108,7 @@ class PositionExitAgent(Agent):
                                      f.price, self.cfg.targets)
             self.trackers[key] = tr
             self.realized[key] = 0.0
+            self._ui_state[key] = (tr.t1_hit, tr.t2_hit, tr.sl_price)
             self._candles_open = 0
             self._update(key, tr)
         else:
@@ -98,5 +120,6 @@ class PositionExitAgent(Agent):
             if tr.closed:
                 self._update(key, tr, closed=True)
                 del self.trackers[key]
+                self._ui_state.pop(key, None)
             else:
                 self._update(key, tr)
