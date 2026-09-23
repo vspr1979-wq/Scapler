@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SCAPLER — layout mock v2 (confirmation)</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:#0d1117; --card:#161b22; --line:#30363d; --line2:#21262d;
+    --tx:#c9d1d9; --tx2:#8b949e; --hi:#e6edf3;
+    --up:#3fb950; --dn:#f85149; --bl:#58a6ff; --gd:#e3b341; --rd:#da3633;
+  }
+  body { background:var(--bg); color:var(--tx); font:12px "Segoe UI",system-ui,sans-serif;
+         max-width:1280px; margin:0 auto; padding:10px 12px 16px; }
+  .mono { font-family:"Cascadia Mono",Consolas,monospace; }
+  .up{color:var(--up)} .dn{color:var(--dn)} .dim{color:var(--tx2)} .hi{color:var(--hi)}
+  .card { background:var(--card); border:1px solid var(--line); border-radius:6px; }
+  .badge { font:600 9px/1 "Cascadia Mono",monospace; color:var(--bl); border:1px solid #1f3a5f;
+           background:rgba(88,166,255,.08); border-radius:3px; padding:2px 4px; margin-left:6px;
+           vertical-align:1px; letter-spacing:.5px; }
+
+  /* mock banner */
+  #banner { background:rgba(227,179,65,.10); border:1px solid #9e6a03; color:var(--gd);
+            border-radius:6px; padding:6px 12px; margin-bottom:8px; font-size:11.5px; }
+  #banner b { letter-spacing:.5px; }
+
+  /* global header strip */
+  #header { display:flex; align-items:center; gap:26px; padding:8px 14px; }
+  .led { width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:5px; }
+  .led.on { background:var(--up); box-shadow:0 0 6px var(--up); }
+  .led.off { background:#484f58; }
+  .broker { font-weight:600; color:var(--hi); }
+  .idx b { color:var(--hi); font-size:11px; }
+  .idx span { font-size:15px; }
+
+  /* global controls row */
+  #controls { display:flex; align-items:center; gap:16px; padding:7px 14px; margin-top:8px; flex-wrap:wrap; }
+  .sel, select.sel { background:var(--bg); border:1px solid var(--line); border-radius:4px;
+        padding:3px 10px; color:var(--hi); font:12px "Segoe UI",sans-serif; }
+  .radio { cursor:pointer; user-select:none; }
+  .radio.on { color:var(--bl); font-weight:600; }
+  #kill { margin-left:auto; background:var(--rd); color:#fff; border:none; border-radius:5px;
+          padding:6px 18px; font-weight:700; cursor:pointer; letter-spacing:.5px; }
+  #kill:hover { background:#f85149; }
+
+  /* tabs */
+  #tabs { display:flex; gap:4px; margin-top:8px; }
+  #tabs button { background:transparent; border:1px solid transparent; border-bottom:none;
+        color:var(--tx2); padding:6px 18px; font:600 11.5px "Segoe UI",sans-serif; cursor:pointer;
+        letter-spacing:1px; border-radius:6px 6px 0 0; }
+  #tabs button.on { background:var(--card); border-color:var(--line); color:var(--hi); }
+  .tabbody { border-top:1px solid var(--line); border-radius:0 0 6px 6px; padding-top:8px; }
+
+  /* grids + panels */
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+  .panel { padding:8px 12px; }
+  .panel h3 { font-size:11px; letter-spacing:1px; color:var(--tx2); text-transform:uppercase;
+              margin-bottom:7px; }
+  .kv { display:flex; justify-content:space-between; gap:10px; padding:2px 0; }
+  .kv b { color:var(--hi); text-align:right; }
+
+  /* signal rows */
+  .sig { display:flex; align-items:center; gap:10px; padding:6px 8px; border-radius:5px; margin-bottom:6px; }
+  .sig.live { background:rgba(63,185,80,.08); border:1px solid #238636; }
+  .sig.idle { background:var(--bg); border:1px solid var(--line); }
+  .dot { width:10px;height:10px;border-radius:50%;flex:none; }
+  .dot.on { background:var(--up); box-shadow:0 0 8px var(--up); }
+  .dot.off { background:#484f58; }
+  .btn { background:#1f6feb; color:#fff; border:none; border-radius:4px; padding:5px 16px;
+         font-weight:600; cursor:pointer; }
+  .btn:hover { background:#388bfd; }
+  .btn.gray { background:var(--line2); color:var(--tx2); cursor:not-allowed; }
+  .btn.red { background:var(--rd); }
+  .chipauto { background:rgba(63,185,80,.12); border:1px solid #238636; color:var(--up);
+              border-radius:4px; padding:5px 10px; font-weight:600; }
+
+  /* tables */
+  table { width:100%; border-collapse:collapse; }
+  th { text-align:left; color:var(--tx2); font-size:10px; letter-spacing:1px; text-transform:uppercase;
+       padding:2px 6px; }
+  td { padding:2.5px 6px; font-family:"Cascadia Mono",Consolas,monospace; }
+  tr.hot { background:rgba(88,166,255,.10); }
+  tr.hot td:first-child { color:var(--bl); font-weight:700; }
+  tr.hot td:last-child { color:var(--bl); font-size:10px; font-weight:700; }
+  tr.dimrow td { color:var(--tx2); }
+  tr.dimrow td.hotcell { color:var(--tx); }
+
+  /* targets */
+  .targets { display:flex; gap:6px; margin:8px 0 4px; }
+  .t { flex:1; text-align:center; padding:5px 0; border-radius:4px; background:var(--line2);
+       color:var(--tx2); font-weight:600; font-size:11px; }
+  .t.hit { background:#238636; color:#fff; }
+  .t.sl { background:rgba(248,81,73,.15); color:var(--dn); }
+
+  /* log */
+  .log div { padding:1.5px 4px; border-bottom:1px solid var(--line2); font-size:11.5px; }
+  .log div:nth-child(odd) { background:var(--bg); }
+
+  /* settings */
+  .brokercard { padding:10px 12px; margin-bottom:8px; }
+  .brokercard h4 { color:var(--hi); font-size:12.5px; margin-bottom:6px; }
+  .fieldrow { display:grid; grid-template-columns:110px 1fr 90px; gap:8px; align-items:center;
+              padding:2.5px 0; }
+  .fieldrow input { background:var(--bg); border:1px solid var(--line); border-radius:4px;
+              color:var(--tx); padding:3px 8px; font-family:"Cascadia Mono",monospace; font-size:11.5px; }
+  .btnrow { display:flex; gap:6px; margin-top:8px; }
+  .btn.sm { padding:4px 12px; font-size:11px; }
+  .btn.ghost { background:var(--line2); color:var(--tx); }
+
+  /* status bar */
+  #statusbar { margin-top:8px; padding:7px 14px; color:var(--up); font-size:11px; }
+
+  /* modal */
+  #modal { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none;
+           align-items:center; justify-content:center; z-index:9; }
+  #modal .box { width:420px; padding:16px 18px; }
+  #modal h4 { color:var(--dn); margin-bottom:8px; letter-spacing:.5px; }
+  #modal p { margin-bottom:12px; line-height:1.5; }
+</style>
+</head>
+<body>
+
+<div id="banner">
+  <b>STATIC LAYOUT MOCK v2 — CONFIRMATION ONLY.</b>
+  No live data, no trading logic. Changes vs reference mock: gamma/hero-zero panel removed
+  (needs scans beyond the 11-strike window → NON-GOAL), tabs added (Settings / Journal / Agents),
+  header + controls + KILL SWITCH made global to all tabs, feature badges <span class="mono">[F1…F10]</span>
+  tie each panel to plan.md §5.
+</div>
+
+<!-- ══════════ GLOBAL HEADER STRIP ══════════ -->
+<div id="header" class="card">
+  <div class="broker"><span class="led on" id="brokerled"></span><span id="brokername">Upstox</span></div>
+  <div class="idx"><b>NIFTY</b><br><span class="mono up">24,512.30 ▲</span></div>
+  <div class="idx"><b>BANKNIFTY</b><br><span class="mono dn">51,203.10 ▼</span></div>
+  <div class="idx"><b>SENSEX</b><br><span class="mono up">80,112.45 ▲</span></div>
+  <div class="dim mono" style="margin-left:auto">ticks/s 42 &nbsp;|&nbsp; feed latency 8 ms</div>
+</div>
+
+<!-- ══════════ GLOBAL CONTROLS ROW (kill switch reachable from every tab) ══════════ -->
+<div id="controls" class="card">
+  <div>Index
+    <select class="sel" id="idxsel">
+      <option>NIFTY</option><option selected>BANKNIFTY</option><option>SENSEX</option>
+      <option>FINNIFTY</option><option>MIDCPNIFTY</option>
+    </select>
+  </div>
+  <div>Expiry <span class="sel mono">29-Sep-2026 · auto(master)</span></div>
+  <div>Lots <span class="sel mono"><span id="lots">1</span> ▾ (qty <span id="qty">30</span>)</span></div>
+  <div>Mode
+    <span class="radio" id="m-auto">○ AUTO</span>&nbsp;
+    <span class="radio on" id="m-manual">● MANUAL</span>
+  </div>
+  <button id="kill">■ KILL SWITCH</button>
+</div>
+
+<!-- ══════════ TABS ══════════ -->
+<div id="tabs">
+  <button class="on" data-tab="trade">TRADE</button>
+  <button data-tab="settings">SETTINGS</button>
+  <button data-tab="journal">JOURNAL</button>
+  <button data-tab="agents">AGENTS</button>
+</div>
+
+<!-- ─────────────────────────── TRADE TAB ─────────────────────────── -->
+<div class="tabbody" id="tab-trade">
+  <div class="grid2" style="margin-top:0">
+    <div class="panel card">
+      <h3>Indicator Panel — closed 1-min candles only <span class="badge">F7</span></h3>
+      <div class="kv"><span class="dim">Last candle</span><b class="mono">10:31 &nbsp;O 51,188 · H 51,236 · L 51,171 · C 51,203</b></div>
+      <div class="kv"><span class="dim">VWAP (session)</span><b class="mono">51,180.20</b></div>
+      <div class="kv"><span class="dim">EMA 9 / EMA 21</span><b class="mono up">51,205.40 / 51,160.10</b></div>
+      <div class="kv"><span class="dim">RSI (14)</span><b class="mono">58.4</b></div>
+      <div class="kv"><span class="dim">ATR (14)</span><b class="mono">22.6</b></div>
+      <div class="kv"><span class="dim">Volume vs 20-avg</span><b class="mono up">1.8×</b></div>
+      <div class="kv"><span class="dim">Setup (CE)</span><b class="up">VALID — close&gt;VWAP · EMA9&gt;EMA21 · RSI∈[55,78] · vol≥1.5×</b></div>
+      <div class="kv"><span class="dim">Setup (PE)</span><b class="dim">not valid</b></div>
+    </div>
+
+    <div class="panel card">
+      <h3>Signal Panel — one signal per side <span class="badge">F1</span><span class="badge">F6</span></h3>
+      <div class="sig live">
+        <div class="dot on"></div>
+        <div><b class="up">CE · SIGNALED</b><br>
+          <span class="mono">BUY BANKNIFTY 29-Sep 51200 CE @ 148.20</span></div>
+        <button class="btn" id="exec" style="margin-left:auto">EXECUTE</button>
+      </div>
+      <div class="sig idle">
+        <div class="dot off"></div>
+        <div><b class="dim">PE · ARMED</b><br><span class="dim mono">no setup — waiting for closed candle</span></div>
+        <button class="btn gray" style="margin-left:auto" disabled>EXECUTE</button>
+      </div>
+      <div class="kv"><span class="dim">State machines</span><b class="mono">CE: SIGNALED &nbsp;|&nbsp; PE: ARMED</b></div>
+      <div class="kv"><span class="dim">Re-arm rule</span><b class="mono dim">DISARMED → break candle → ARMED → valid candle → SIGNALED</b></div>
+      <div class="kv"><span class="dim">Signal TTL</span><b class="mono dim">3 closed candles, then needs break</b></div>
+      <div class="kv"><span class="dim">Agents</span><b class="up mono">13 / 13 healthy ●</b></div>
+      <div class="kv"><span class="dim">Today</span><b class="mono">trades 1/3 · SL-streak 0 · P&amp;L <span class="up">+₹207</span></b></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel card">
+      <h3>Strike Window — 5 ITM + ATM + 5 OTM <span class="badge">F5</span></h3>
+      <table>
+        <tr><th></th><th>Strike</th><th>Γ</th><th>CE LTP</th><th>PE LTP</th><th></th></tr>
+        <tr class="dimrow"><td>ITM5</td><td>50700</td><td>0.0008</td><td class="hotcell">548.10</td><td>41.20</td><td></td></tr>
+        <tr class="dimrow"><td>ITM4</td><td>50800</td><td>0.0014</td><td class="hotcell">472.35</td><td>66.10</td><td></td></tr>
+        <tr class="dimrow"><td>ITM3</td><td>50900</td><td>0.0022</td><td class="hotcell">401.60</td><td>96.40</td><td></td></tr>
+        <tr class="dimrow"><td>ITM2</td><td>51000</td><td>0.0031</td><td class="hotcell">336.85</td><td>133.55</td><td>PUT WALL</td></tr>
+        <tr class="dimrow"><td>ITM1</td><td>51100</td><td>0.0040</td><td class="hotcell">278.40</td><td>176.90</td><td>δ+0.62</td></tr>
+        <tr class="hot"><td>ATM</td><td>51200</td><td>0.0045</td><td>148.20 ▲</td><td>245.60</td><td>◀ SELECTED δ+0.53</td></tr>
+        <tr class="dimrow"><td>OTM1</td><td>51300</td><td>0.0042</td><td class="hotcell">171.05</td><td>268.30</td><td>CALL WALL</td></tr>
+        <tr class="dimrow"><td>OTM2</td><td>51400</td><td>0.0035</td><td class="hotcell">121.90</td><td>319.75</td><td>δ+0.38</td></tr>
+        <tr class="dimrow"><td>OTM3</td><td>51500</td><td>0.0026</td><td class="hotcell">82.45</td><td>380.10</td><td></td></tr>
+        <tr class="dimrow"><td>OTM4</td><td>51600</td><td>0.0018</td><td class="hotcell">52.30</td><td>450.55</td><td></td></tr>
+        <tr class="dimrow"><td>OTM5</td><td>51700</td><td>0.0011</td><td class="hotcell">31.15</td><td>529.40</td><td></td></tr>
+      </table>
+      <div class="dim" style="margin-top:6px;font-size:10.5px">
+        re-center on ±2 steps drift · 22 option subs + spots only · moneyness labels flip for PE ·
+        pick = |δ| ∈ [0.45,0.60] + spread ≤ 2 ticks
+      </div>
+    </div>
+
+    <div class="panel card">
+      <h3>Open Position — long premium only <span class="badge">F2</span></h3>
+      <div class="kv"><span class="dim">Instrument</span><b class="mono">BANKNIFTY 29-Sep 51200 CE</b></div>
+      <div class="kv"><span class="dim">Qty</span><b class="mono">30 (1 lot × 1)</b></div>
+      <div class="kv"><span class="dim">Avg entry / LTP</span><b class="mono">148.20 / <span class="up">155.10</span></b></div>
+      <div class="kv"><span class="dim">Unrealized P&amp;L</span><b class="mono up">+₹207.00 (+6.9 pts)</b></div>
+      <div class="targets">
+        <span class="t hit">T1 +5 ✓</span><span class="t">T2 +12</span>
+        <span class="t">T3 +20</span><span class="t sl">SL −8</span>
+      </div>
+      <div class="kv"><span class="dim">Trail (N=1 lot)</span><b class="mono">T1 hit → SL=BE ✓ · T2 → SL=+5 · T3 → flat</b></div>
+      <div class="kv"><span class="dim">Time-stop</span><b class="mono dim">exit @ 15 candles · square-off 15:20</b></div>
+      <div class="kv"><span class="dim">SideGuard</span><b class="mono up">SELL allowed = close-only ✓</b></div>
+      <button class="btn red" style="width:100%;margin-top:8px">EXIT (SELL TO CLOSE)</button>
+    </div>
+  </div>
+
+  <div class="panel card" style="margin-top:8px">
+    <h3>Trade / Signal Log — EventBus choreography <span class="badge">F9</span></h3>
+    <div class="log mono" id="log">
+      <div><span class="dim">10:31:00.412</span> candle.closed BANKNIFTY 1m</div>
+      <div><span class="dim">10:31:00.428</span> indicators.ready vwap=51180.2 ema9=51205.4 rsi=58.4 atr=22.6 volx=1.8</div>
+      <div><span class="dim">10:31:00.431</span> <span class="up">signal.new CE (ARMED→SIGNALED)</span> ttl=3 candles</div>
+      <div><span class="dim">10:31:00.433</span> strike.selected 51200 CE (δ+0.53, spread 1 tick, expiry 29-Sep)</div>
+      <div><span class="dim">10:31:00.436</span> order.approved risk-checks pass (trades 1/3, window 09:17–15:15)</div>
+      <div><span class="dim">10:31:00.441</span> <span class="up">order.req BUY_TO_OPEN MARKET 51200 CE qty 30</span> → Upstox v2</div>
+      <div><span class="dim">10:31:00.512</span> order.fill @ 148.20 (71 ms round-trip · tick→signal 19 ms)</div>
+      <div><span class="dim">10:33:14.020</span> <span class="up">exit T1 hit +5 → SELL_TO_CLOSE blocked (N=1 lot) → SL trailed to BE</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────── SETTINGS TAB ─────────────────────────── -->
+<div class="tabbody" id="tab-settings" style="display:none">
+  <div class="grid2" style="margin-top:0">
+    <div>
+      <div class="panel card brokercard">
+        <h4><span class="led on"></span>Upstox — API v2 + Streamer v3 <span class="badge">F3</span>
+            &nbsp;<span class="dim" style="font-weight:400">● active broker</span></h4>
+        <div class="fieldrow"><span class="dim">API key</span><input value="uvx_••••••••••••" readonly><span class="dim mono">saved</span></div>
+        <div class="fieldrow"><span class="dim">API secret</span><input type="password" value="••••••••••" readonly><span class="dim mono">DPAPI</span></div>
+        <div class="fieldrow"><span class="dim">Redirect URI</span><input value="https://localhost/oauth" readonly><span class="dim mono">saved</span></div>
+        <div class="fieldrow"><span class="dim">PIN / 2FA</span><input type="password" value="••••" readonly><span class="dim mono">DPAPI</span></div>
+        <div class="kv"><span class="dim">Token</span><b class="mono up">valid · expires 06:00 next · auto-refresh 09:10</b></div>
+        <div class="kv"><span class="dim">Last error</span><b class="dim mono">—</b></div>
+        <div class="btnrow">
+          <button class="btn sm ghost">EDIT</button><button class="btn sm ghost">SAVE</button>
+          <button class="btn sm">CONNECT</button><button class="btn sm red">DISCONNECT</button>
+        </div>
+      </div>
+      <div class="panel card brokercard">
+        <h4><span class="led off"></span>Groww — GrowwAPI <span class="badge">F3</span>
+            &nbsp;<span class="dim" style="font-weight:400">○ standby</span></h4>
+        <div class="fieldrow"><span class="dim">API key</span><input value="gw_••••••••" readonly><span class="dim mono">saved</span></div>
+        <div class="fieldrow"><span class="dim">API secret</span><input type="password" value="••••••••" readonly><span class="dim mono">DPAPI</span></div>
+        <div class="kv"><span class="dim">Token</span><b class="dim mono">not generated</b></div>
+        <div class="kv"><span class="dim">Last error</span><b class="dim mono">—</b></div>
+        <div class="btnrow">
+          <button class="btn sm ghost">EDIT</button><button class="btn sm ghost">SAVE</button>
+          <button class="btn sm ghost">CONNECT</button><button class="btn sm gray" disabled>DISCONNECT</button>
+        </div>
+        <div class="dim" style="margin-top:6px;font-size:10.5px">
+          one active broker at a time · switching requires a flat position (Risk veto V_HELD)
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel card">
+        <h3>Risk & session <span class="badge">F8</span></h3>
+        <div class="kv"><span class="dim">Entry window (IST)</span><b class="mono">09:17 – 15:15</b></div>
+        <div class="kv"><span class="dim">Hard square-off</span><b class="mono">15:20</b></div>
+        <div class="kv"><span class="dim">Max trades / day</span><b class="mono">3</b></div>
+        <div class="kv"><span class="dim">Max daily loss</span><b class="mono">₹2,500</b></div>
+        <div class="kv"><span class="dim">SL-streak stop</span><b class="mono">2</b></div>
+        <div class="kv"><span class="dim">Stale feed / reconnect</span><b class="mono">5 s / 30 s</b></div>
+        <div class="kv"><span class="dim">Targets T1/T2/T3/SL</span><b class="mono">+5 / +12 / +20 / −8 pts</b></div>
+        <div class="kv"><span class="dim">Signal TTL</span><b class="mono">3 candles</b></div>
+        <div class="kv"><span class="dim">Time-stop</span><b class="mono">15 candles</b></div>
+        <div class="kv"><span class="dim">Orphan position</span><b class="mono">square_off</b></div>
+        <div class="kv"><span class="dim">Replay mode</span><b class="mono dn">OFF (live only)</b></div>
+      </div>
+      <div class="panel card" style="margin-top:8px">
+        <h3>Contracts <span class="badge">F4</span></h3>
+        <table>
+          <tr><th>Index</th><th>Exch</th><th>Step</th><th>Lot</th><th>Source</th></tr>
+          <tr><td>NIFTY</td><td>NSE</td><td>50</td><td>65</td><td class="dim">master-validated</td></tr>
+          <tr class="hot"><td>BANKNIFTY</td><td>NSE</td><td>100</td><td>30</td><td>selected</td></tr>
+          <tr><td>SENSEX</td><td>BSE</td><td>100</td><td>20</td><td class="dim">master-validated</td></tr>
+          <tr><td>FINNIFTY</td><td>NSE</td><td>50</td><td>60</td><td class="dim">master-validated</td></tr>
+          <tr><td>MIDCPNIFTY</td><td>NSE</td><td>25</td><td>120</td><td class="dim">master-validated</td></tr>
+        </table>
+        <div class="dim" style="margin-top:6px;font-size:10.5px">
+          expiry = nearest live expiry from instrument master (never a hardcoded weekday) ·
+          lot multiplier 1–10 · master is source of truth, table sanity-checks it
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────── JOURNAL TAB ─────────────────────────── -->
+<div class="tabbody" id="tab-journal" style="display:none">
+  <div class="panel card">
+    <h3>Audit journal — SQLite WAL, single writer <span class="badge">F9</span>
+      <span style="float:right">
+        <button class="btn sm ghost">FILTER: topic=order.* ▾</button>
+        <button class="btn sm ghost">EXPORT CSV</button>
+      </span>
+    </h3>
+    <table>
+      <tr><th>seq</th><th>ts (UTC)</th><th>topic</th><th>agent</th><th>detail</th></tr>
+      <tr><td>48211</td><td>04:59:12.412</td><td>candle.closed</td><td>candle</td><td>BANKNIFTY 1m O51188 H51236 L51171 C51203</td></tr>
+      <tr><td>48212</td><td>04:59:12.428</td><td>indicators.ready</td><td>indicator</td><td>vwap=51180.2 ema9=51205.4 ema21=51160.1 rsi=58.4 atr=22.6 volx=1.8</td></tr>
+      <tr><td>48213</td><td>04:59:12.431</td><td class="up">signal.new</td><td>signal</td><td>CE ARMED→SIGNALED ttl=3 candle=10:31 tick→signal 19ms</td></tr>
+      <tr><td>48214</td><td>04:59:12.433</td><td>strike.selected</td><td>strike</td><td>51200 CE δ+0.53 spread=1tick window=50700..51700</td></tr>
+      <tr><td>48215</td><td>04:59:12.436</td><td>order.approved</td><td>risk</td><td>trades 1/3 · window ok · loss ok · streak 0</td></tr>
+      <tr><td>48216</td><td>04:59:12.438</td><td>sideguard.pass</td><td>order</td><td>BUY_TO_OPEN option=MIS qty=30 client=SCP-260929-0001</td></tr>
+      <tr><td>48217</td><td>04:59:12.441</td><td>order.req</td><td>order</td><td>MARKET BUY 51200 CE qty30 → upstox/v2/order/place</td></tr>
+      <tr><td>48218</td><td>04:59:12.512</td><td class="up">order.fill</td><td>order</td><td>@148.20 qty30 avg148.20 latency=71ms</td></tr>
+      <tr><td>48219</td><td>05:03:14.020</td><td>exit.trigger</td><td>position</td><td>T1 +5 hit · N=1 lot → trail SL 140.20→148.20 (BE)</td></tr>
+      <tr><td>48220</td><td>05:03:14.021</td><td class="dim">risk.veto</td><td>risk</td><td>V_HELD — new entries blocked while position open</td></tr>
+    </table>
+    <div class="dim" style="margin-top:6px;font-size:10.5px">
+      write-ahead: order rows committed before dispatch · tables: sessions, events, signals, orders,
+      fills, positions, risk_veto, agent_health (plan.md §9)
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────── AGENTS TAB ─────────────────────────── -->
+<div class="tabbody" id="tab-agents" style="display:none">
+  <div class="panel card">
+    <h3>Agent health — 13 asyncio agents, EventBus only <span class="badge">F10</span>
+      <span style="float:right"><button class="btn sm ghost">BUS RATES ▾</button></span>
+    </h3>
+    <table>
+      <tr><th>agent</th><th>job</th><th>state</th><th>up</th><th>restarts</th><th>inbox</th><th>p99 lag</th><th>beat</th></tr>
+      <tr><td>market_data</td><td>WS ingest, LTP cache</td><td class="up">RUN</td><td>2h14m</td><td>0</td><td>0</td><td>0.4 ms</td><td>0.2 s</td></tr>
+      <tr><td>candle</td><td>ticks → closed 1m bars</td><td class="up">RUN</td><td>2h14m</td><td>0</td><td>0</td><td>0.2 ms</td><td>0.2 s</td></tr>
+      <tr><td>indicator</td><td>VWAP/EMA/RSI/ATR incremental</td><td class="up">RUN</td><td>2h14m</td><td>0</td><td>0</td><td>0.6 ms</td><td>0.2 s</td></tr>
+      <tr><td>signal</td><td>CE+PE state machines</td><td class="up">RUN</td><td>2h14m</td><td>0</td><td>0</td><td>0.3 ms</td><td>0.2 s</td></tr>
+      <tr><td>strike</td><td>master, expiry, 11-window</td><td class="up">RUN</td><td>2h14m</td><td>0</td><td>0</td><td>1.1 ms</td><td>0.2 s</td></tr>
+      <tr><td>risk</td><td>vetoes, breakers, guards</td><td class="up">RUN</td><td>2h14m</td><td>0</td><td>0</td><td>0.2 ms</td><td>0.2 s</td></tr>
+      <tr><td>order</td><td>MARKET orders + SideGuard</td><td class="up">RUN</td><td>2h14m</td><td>0</td><td>0</td><td>0.5 ms</td><td>0.2 s</td></tr>
+      <tr><td>position_exit</td><td>T1/T2/T3/SL tick-watch</td><td class="up">RUN</td><td>2h14m</td><td>0</td><td>1</td><td>0.3 ms</td><td>0.2 s</td></tr>
+      <tr><td>connection</td><td>login/token lifecycle</td><td class="up">RUN</td><td>2h14m</td><td>0</td><td>0</td><td>2.0 ms</td><td>1.0 s</td></tr>
+      <tr><td>watchdog</td><td>stale-feed, reconnect, orphans</td><td class="up">RUN</td><td>2h14m</td><td>0</td><td>0</td><td>0.1 ms</td><td>1.0 s</td></tr>
+      <tr><td>journal</td><td>SQLite single writer</td><td class="up">RUN</td><td>2h14m</td><td>0</td><td>3</td><td>1.8 ms</td><td>1.0 s</td></tr>
+      <tr><td>ui</td><td>snapshots 10–20 Hz → WebView2</td><td class="up">RUN</td><td>2h14m</td><td>0</td><td>1</td><td>4.2 ms</td><td>0.1 s</td></tr>
+      <tr><td>supervisor</td><td>health, crash-restart, kill</td><td class="up">RUN</td><td>2h14m</td><td>0</td><td>0</td><td>0.1 ms</td><td>1.0 s</td></tr>
+    </table>
+    <div class="dim" style="margin-top:6px;font-size:10.5px">
+      bus rates: tick.raw 42/s (latest-wins coalesced) · candle.closed 1/min · order.* priority lane ·
+      crash-injection test: supervisor restarts agent, journal intact
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ GLOBAL STATUS BAR ══════════ -->
+<div id="statusbar" class="card mono">
+  ● WS connected &nbsp;|&nbsp; ticks/s 42 &nbsp;|&nbsp; last candle 10:31:00 &nbsp;|&nbsp;
+  tick→signal 19 ms (p99 31 ms) &nbsp;|&nbsp; signal→dispatch 3 ms &nbsp;|&nbsp; feed latency 8 ms &nbsp;|&nbsp;
+  agents 13/13 &nbsp;|&nbsp; RAM 96 MB &nbsp;|&nbsp; REPLAY OFF
+</div>
+
+<!-- kill-switch modal -->
+<div id="modal"><div class="box card">
+  <h4>■ KILL SWITCH</h4>
+  <p>Cancel all pending orders, <b>square off the open position at MARKET</b> (sell-to-close),
+     and halt Signal + Order agents until re-armed. This cannot short anything.</p>
+  <div style="display:flex;gap:8px;justify-content:flex-end">
+    <button class="btn ghost sm" id="m-cancel">CANCEL</button>
+    <button class="btn red sm" id="m-confirm">KILL &amp; SQUARE OFF</button>
+  </div>
+</div></div>
+
+<script>
+  // tab switching
+  const tabs = document.querySelectorAll('#tabs button');
+  tabs.forEach(b => b.onclick = () => {
+    tabs.forEach(x => x.classList.toggle('on', x === b));
+    document.querySelectorAll('.tabbody').forEach(t => t.style.display = 'none');
+    document.getElementById('tab-' + b.dataset.tab).style.display = '';
+  });
+  // mode toggle (mock): AUTO replaces EXECUTE with auto-fire chip
+  const ma = document.getElementById('m-auto'), mm = document.getElementById('m-manual');
+  const exec = document.getElementById('exec');
+  function setMode(auto) {
+    ma.className = 'radio' + (auto ? ' on' : ''); ma.textContent = (auto ? '● ' : '○ ') + 'AUTO';
+    mm.className = 'radio' + (auto ? '' : ' on'); mm.textContent = (auto ? '○ ' : '● ') + 'MANUAL';
+    if (auto) { exec.className = 'chipauto'; exec.textContent = 'AUTO-FIRE ✓'; exec.disabled = true; }
+    else      { exec.className = 'btn'; exec.textContent = 'EXECUTE'; exec.disabled = false; }
+  }
+  ma.onclick = () => setMode(true); mm.onclick = () => setMode(false);
+  // index → lot size preview
+  const LOTS = { NIFTY:65, BANKNIFTY:30, SENSEX:20, FINNIFTY:60, MIDCPNIFTY:120 };
+  document.getElementById('idxsel').onchange = e =>
+    document.getElementById('qty').textContent = LOTS[e.target.value];
+  // kill switch modal
+  const modal = document.getElementById('modal');
+  document.getElementById('kill').onclick = () => modal.style.display = 'flex';
+  document.getElementById('m-cancel').onclick = () => modal.style.display = 'none';
+  document.getElementById('m-confirm').onclick = () => {
+    modal.style.display = 'none';
+    const log = document.getElementById('log');
+    const d = document.createElement('div');
+    d.innerHTML = '<span class="dim">10:35:02.000</span> <span class="dn">kill.switch → cancel pending + SELL_TO_CLOSE 30 @MKT → agents halted</span>';
+    log.appendChild(d);
+    document.getElementById('brokerled'); // no-op
+    tabs[0].click();
+  };
+  // EXECUTE appends a mock log line (layout demo only)
+  exec.onclick = () => {
+    const log = document.getElementById('log');
+    const d = document.createElement('div');
+    d.innerHTML = '<span class="dim">10:32:00.101</span> <span class="up">ui.execute CE (MANUAL click) → order.request priority lane</span>';
+    log.appendChild(d);
+  };
+</script>
+</body>
+</html>
