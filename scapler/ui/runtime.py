@@ -42,7 +42,6 @@ from ..core import config as config_mod
 from ..core.config import Settings
 from ..core.messages import Topic
 from ..core.secrets_store import SecretStore
-from .demo_feed import DemoAdapter, DemoBroker, demo_master
 
 log = logging.getLogger(__name__)
 
@@ -62,6 +61,9 @@ class ScaplerRuntime:
         self.store = SecretStore(self.data_dir)
 
         if demo:
+            # labelled synthetic fixtures — imported ONLY in demo mode; the
+            # live path never touches this module
+            from .demo_feed import DemoAdapter, DemoBroker, demo_master
             # demo days cycle continuously → lift the daily-trade breaker so
             # the scenario stays observable (UI shows the real counters)
             self.cfg = dataclasses.replace(self.cfg, max_trades_per_day=50)
@@ -79,7 +81,8 @@ class ScaplerRuntime:
             self.broker = _NullBroker()
             self.broker_name = "no broker"
         self.index = self._resolve_index(self.cfg.index)
-        self.spot_key = self.master.indices[self.index] if self.master else ""
+        self.spot_key = self.master.indices.get(self.index, "") \
+            if self.master else ""
         self.expiry = self._nearest_expiry(self.index)
 
     # ── helpers ─────────────────────────────────────────────────────
@@ -251,8 +254,8 @@ class ScaplerRuntime:
         """Hot-swap trading agents onto the live adapter+master (flat only)."""
         adapter = self.conn.adapter(broker)
         master = self.conn.master
-        if adapter is None or master is None:
-            return
+        if adapter is None or master is None or not master.indices:
+            return                      # nothing real to adopt yet
         self.master, self.adapter, self.broker = master, adapter, adapter
         self.broker_name = broker
         self.index = self._resolve_index(self.cfg.index)
@@ -358,6 +361,18 @@ async def run_dev(host: str = "0.0.0.0", port: int = 8787,
     await start_dev_server(rt, host, port)
 
 
-def run_desktop(demo: bool = False) -> None:      # pragma: no cover (Win)
-    from .transport import run_webview
-    run_webview(ScaplerRuntime(demo=demo))
+def desktop_runtime(demo: bool = False, settings_path: str | Path | None = None):
+    """Live desktop runtime with settings LOADED FROM DISK (and persisted on
+    every save). Default path: {data_dir}/settings.json."""
+    path = Path(settings_path) if settings_path else \
+        Path(Settings().data_dir).expanduser() / "settings.json"
+    rt = ScaplerRuntime(settings=config_mod.load(path), demo=demo,
+                        settings_path=path)
+    return rt, path
+
+
+def run_desktop(demo: bool = False,
+                settings_path: str | Path | None = None) -> None:
+    from .transport import run_webview                # pragma: no cover (Win)
+    rt, _ = desktop_runtime(demo=demo, settings_path=settings_path)
+    run_webview(rt)

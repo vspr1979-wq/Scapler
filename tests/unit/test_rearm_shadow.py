@@ -60,3 +60,23 @@ async def test_rearm_refused_with_open_position(tmp_path):
     assert r["ok"] is False and "position open" in r["error"]
     assert rt.rk.killed                           # still halted
     await rt.stop()
+
+
+def test_desktop_runtime_loads_settings_from_disk(tmp_path):
+    from scapler.core.config import Settings, save
+    from scapler.ui.runtime import desktop_runtime
+    p = tmp_path / "settings.json"
+    save(Settings(shadow=False, broker_active="groww", index="SENSEX"), p)
+    rt, path = desktop_runtime(settings_path=p)
+    assert rt.cfg.shadow is False and rt.cfg.index == "SENSEX"
+    assert rt.cfg.broker_active == "groww"
+    assert rt.settings_path == path == p
+    assert rt.demo is False
+    assert getattr(rt, "oa", None) is None         # agents built by run_webview
+
+
+def test_desktop_runtime_default_path_is_data_dir():
+    from scapler.ui.runtime import desktop_runtime
+    rt, path = desktop_runtime()
+    assert path.name == "settings.json" and ".scapler" in str(path)
+    assert rt.settings_path == path

@@ -32,7 +32,7 @@ def main() -> None:
         asyncio.run(_run())
     else:
         from scapler.ui.runtime import run_desktop
-        run_desktop(demo=args.demo)
+        run_desktop(demo=args.demo, settings_path=args.settings)
 
 
 if __name__ == "__main__":
