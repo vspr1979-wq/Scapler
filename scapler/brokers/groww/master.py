@@ -13,6 +13,7 @@ from __future__ import annotations
 import csv
 import io
 
+from ...core.clock import ist_now
 from ...core.messages import InstrumentKey, OptionType
 from ..base import InstrumentMeta, MasterTable
 from ..upstox.master import INDEX_SYMBOLS   # canonical names shared
@@ -44,6 +45,11 @@ def parse_master(body: bytes, today: str) -> MasterTable:
         expiry = get("expiry_date")                  # ISO yyyy-mm-dd
         if not expiry or expiry < today:
             continue
+        # Drop same-day expiry after 15:30 IST (market closed)
+        if expiry == today:
+            now_ist = ist_now()
+            if now_ist.hour >= 15 and now_ist.minute >= 30:
+                continue
         try:
             strike = float(get("strike_price"))
             lot = int(float(get("lot_size")))

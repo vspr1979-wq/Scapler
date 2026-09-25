@@ -13,6 +13,7 @@ import io
 import re
 from datetime import datetime
 
+from ...core.clock import ist_now
 from ...core.messages import InstrumentKey, OptionType
 from ..base import InstrumentMeta, MasterTable
 
@@ -69,6 +70,11 @@ def parse_master(blobs: dict[str, bytes], today: str) -> MasterTable:
             expiry = _parse_expiry(get("expiry"))
             if expiry is None or expiry < today:
                 continue
+            # Drop same-day expiry after 15:30 IST (market closed)
+            if expiry == today:
+                now_ist = ist_now()
+                if now_ist.hour >= 15 and now_ist.minute >= 30:
+                    continue
             m = _OPT_RE.search(get("symbol"))
             if not m:
                 continue

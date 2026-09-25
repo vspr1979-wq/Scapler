@@ -40,6 +40,7 @@ class SideFSM:
             return out                       # flat is pushed via set_held(False)
         if self.state is S.DISARMED:
             if broken:
+                self.ttl_left = self.ttl
                 out.append(self._go(S.ARMED, "setup broke on closed candle", candle_ts))
             return out                       # valid candles here are IGNORED
         if self.state is S.ARMED:

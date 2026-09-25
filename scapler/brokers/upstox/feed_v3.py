@@ -82,6 +82,7 @@ class UpstoxFeedV3:
     def __init__(self, rest: UpstoxRest, ws_factory=None) -> None:
         self._rest = rest
         self._ws_factory = ws_factory or _default_ws_factory
+        self._handle: _Handle | None = None
 
     async def open(self, keys: list[str], mode: str = "full") -> _Handle:
         url = await self._rest.authorize_feed_url()
@@ -89,4 +90,13 @@ class UpstoxFeedV3:
         sub = orjson.dumps({"guid": str(uuid.uuid4()), "method": "sub",
                             "data": {"mode": mode, "instrumentKeys": list(keys)}})
         await ws.send(sub)
-        return _Handle(ws, asyncio.get_running_loop())
+        self._handle = _Handle(ws, asyncio.get_running_loop())
+        return self._handle
+
+    async def update_subs(self, keys: list[str], mode: str = "full") -> None:
+        """Hot-resubscribe without full reconnect (used by MarketDataAgent on window.rebuilt)."""
+        if self._handle is None:
+            return
+        sub = orjson.dumps({"guid": str(uuid.uuid4()), "method": "sub",
+                            "data": {"mode": mode, "instrumentKeys": list(keys)}})
+        await self._handle._ws.send(sub)
