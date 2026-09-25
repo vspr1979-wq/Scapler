@@ -3,6 +3,13 @@
 Windows (packaged): double-click / `scapler` → pywebview + WebView2 window.
 Development: `python -m scapler --dev [--demo] [--port P]` → browser preview.
 """
+# Windows: winloop (uvloop port) for lower latency asyncio
+try:
+    import winloop
+    winloop.install()
+except Exception:
+    pass  # not on Windows or not installed
+
 import argparse
 
 
