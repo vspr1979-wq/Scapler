@@ -1,0 +1,68 @@
+{
+  "broker_active": "upstox",
+  "data_dir": "~/.scapler",
+  "entry_window": [
+    "09:17",
+    "15:15"
+  ],
+  "gex_radius": 12,
+  "hero_zero_enabled": true,
+  "hero_zero_max_day": 1,
+  "hero_zero_max_premium": 10.0,
+  "hero_zero_min_vol_ratio": 1.5,
+  "index": "NIFTY",
+  "lot_multiplier": 1,
+  "max_daily_loss_inr": 2500,
+  "max_trades_per_day": 10,
+  "mode": "MANUAL",
+  "orphan_policy": "square_off",
+  "recenter_steps": 2,
+  "reconnect_stale_s": 30,
+  "replay": false,
+  "setup": {
+    "atr_min": {
+      "BANKNIFTY": 15.0,
+      "FINNIFTY": 12.0,
+      "MIDCPNIFTY": 15.0,
+      "NIFTY": 10.0,
+      "SENSEX": 15.0
+    },
+    "delta_band": [
+      0.45,
+      0.6
+    ],
+    "max_spread_ticks": 2,
+    "rsi_ce": [
+      55.0,
+      78.0
+    ],
+    "rsi_pe": [
+      22.0,
+      45.0
+    ],
+    "vol_mult": 1.0
+  },
+  "shadow": true,
+  "signal_ttl_candles": 10,
+  "sl_streak_stop": 2,
+  "square_off": "15:20",
+  "stale_feed_s": 5,
+  "steps": {
+    "BANKNIFTY": 100.0,
+    "FINNIFTY": 50.0,
+    "MIDCPNIFTY": 25.0,
+    "NIFTY": 50.0,
+    "SENSEX": 100.0
+  },
+  "targets": {
+    "sl": 8.0,
+    "t1": 5.0,
+    "t2": 12.0,
+    "t3": 20.0
+  },
+  "time_stop_candles": 15,
+  "trail_n1": [
+    "BE",
+    "T1"
+  ]
+}

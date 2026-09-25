@@ -1,0 +1,122 @@
+seq,ts_ist,topic,agent,detail
+1062,09:08:31.130,connection.status,connection,upstox DISCONNECTED
+1091,09:08:33.038,connection.status,connection,upstox CONNECTING
+1107,09:08:33.393,connection.status,connection,upstox CONNECTING
+1497,09:08:51.918,connection.status,connection,upstox CONNECTED
+2867,09:09:51.857,connection.status,connection,groww DISCONNECTED
+2914,09:09:54.116,connection.status,connection,groww CONNECTING
+3005,09:10:00.033,connection.status,connection,groww CONNECTED
+3006,09:10:00.033,feed.reconnect,watchdog,feed.reconnect (broker switch → groww)
+3024,09:10:00.366,connection.status,connection,groww CONNECTED
+11987,09:16:37.233,feed.reconnect,watchdog,feed.reconnect (index switch → BANKNIFTY)
+12030,09:16:38.867,feed.reconnect,watchdog,feed.reconnect (index switch → NIFTY)
+12398,09:16:54.728,feed.reconnect,watchdog,feed.reconnect (broker switch → upstox)
+12450,09:16:57.163,connection.status,connection,groww DISCONNECTED
+12492,09:16:58.678,feed.reconnect,watchdog,feed.reconnect (broker switch → upstox)
+12610,09:17:03.932,connection.status,connection,upstox CONNECTED
+12664,09:17:06.728,window.rebuilt,strike,NIFTY center 0 (1 keys)
+12704,09:17:07.984,candle.closed,candle,NSE_INDEX|NIFTY O0 H0 L0 C0 V1
+12705,09:17:07.984,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 0.0
+12794,09:17:11.795,feed.reconnect,watchdog,feed.reconnect (stale 5s)
+13161,09:17:28.068,candle.closed,candle,NSE_INDEX|NIFTY O0 H0 L0 C0 V1
+13163,09:17:28.068,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 1.0
+13466,09:17:41.998,feed.reconnect,watchdog,feed.reconnect (stale 19s)
+13846,09:17:58.084,candle.closed,candle,NSE_INDEX|NIFTY O0 H0 L0 C0 V1
+13847,09:17:58.084,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 1.0
+14166,09:18:12.155,feed.reconnect,watchdog,feed.reconnect (stale 19s)
+14175,09:18:13.117,candle.closed,candle,NSE_INDEX|NIFTY O0 H0 L0 C0 V1
+14177,09:18:13.117,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 1.0
+14842,09:18:42.408,feed.reconnect,watchdog,feed.reconnect (stale 30s)
+14851,09:18:43.197,candle.closed,candle,NSE_INDEX|NIFTY O0 H0 L0 C0 V1
+14852,09:18:43.197,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 1.0
+15506,09:19:12.626,feed.reconnect,watchdog,feed.reconnect (stale 30s)
+15527,09:19:13.240,candle.closed,candle,NSE_INDEX|NIFTY O0 H0 L0 C0 V1
+15529,09:19:13.248,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 1.0
+16194,09:19:42.833,feed.reconnect,watchdog,feed.reconnect (stale 30s)
+16201,09:19:43.264,candle.closed,candle,NSE_INDEX|NIFTY O0 H0 L0 C0 V1
+16202,09:19:43.264,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 1.0
+16872,09:20:12.965,feed.reconnect,watchdog,feed.reconnect (stale 30s)
+17213,09:20:28.306,candle.closed,candle,NSE_INDEX|NIFTY O0 H0 L0 C0 V1
+17214,09:20:28.306,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 1.0
+17543,09:20:43.294,feed.reconnect,watchdog,feed.reconnect (stale 20s)
+17642,09:20:48.297,candle.closed,candle,NSE_INDEX|NIFTY O0 H0 L0 C0 V1
+17657,09:20:48.299,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 1.0
+18203,09:21:13.561,feed.reconnect,watchdog,feed.reconnect (stale 30s)
+18538,09:21:28.381,candle.closed,candle,NSE_INDEX|NIFTY O0 H0 L0 C0 V1
+18539,09:21:28.381,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 1.0
+18878,09:21:43.893,feed.reconnect,watchdog,feed.reconnect (stale 19s)
+18989,09:21:48.474,candle.closed,candle,NSE_INDEX|NIFTY O0 H0 L0 C0 V1
+18990,09:21:48.474,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 1.0
+19567,09:22:14.041,feed.reconnect,watchdog,feed.reconnect (stale 30s)
+19664,09:22:18.512,candle.closed,candle,NSE_INDEX|NIFTY O0 H0 L0 C0 V1
+19665,09:22:18.512,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 1.0
+20247,09:22:44.165,feed.reconnect,watchdog,feed.reconnect (stale 30s)
+20343,09:22:48.625,candle.closed,candle,NSE_INDEX|NIFTY O0 H0 L0 C0 V1
+20344,09:22:48.625,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 1.0
+20881,09:23:14.616,feed.reconnect,watchdog,feed.reconnect (stale 30s)
+20979,09:23:19.846,candle.closed,candle,NSE_INDEX|NIFTY O0 H0 L0 C0 V1
+20980,09:23:19.849,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 1.0
+21525,09:23:45.182,feed.reconnect,watchdog,feed.reconnect (stale 30s)
+21620,09:23:49.984,candle.closed,candle,NSE_INDEX|NIFTY O0 H0 L0 C0 V1
+21622,09:23:49.985,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 1.0
+22168,09:24:15.414,feed.reconnect,watchdog,feed.reconnect (stale 30s)
+22486,09:24:30.042,candle.closed,candle,NSE_INDEX|NIFTY O0 H0 L0 C0 V1
+22488,09:24:30.042,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 1.0
+22805,09:24:46.343,feed.reconnect,watchdog,feed.reconnect (stale 19s)
+22891,09:24:50.093,candle.closed,candle,NSE_INDEX|NIFTY O0 H0 L0 C0 V1
+22893,09:24:50.093,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 1.0
+23479,09:25:16.879,feed.reconnect,watchdog,feed.reconnect (stale 30s)
+23552,09:25:20.224,candle.closed,candle,NSE_INDEX|NIFTY O0 H0 L0 C0 V1
+23553,09:25:20.224,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 1.0
+24142,09:25:47.052,feed.reconnect,watchdog,feed.reconnect (stale 30s)
+24192,09:25:50.352,candle.closed,candle,NSE_INDEX|NIFTY O0 H0 L0 C0 V1
+24193,09:25:50.352,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 1.0
+24775,09:26:17.057,feed.reconnect,watchdog,feed.reconnect (stale 30s)
+24841,09:26:20.558,candle.closed,candle,NSE_INDEX|NIFTY O0 H0 L0 C0 V1
+24842,09:26:20.559,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 1.0
+25344,09:26:47.323,feed.reconnect,watchdog,feed.reconnect (stale 30s)
+25656,09:27:02.256,candle.closed,candle,NSE_INDEX|NIFTY O0 H0 L0 C0 V1
+25657,09:27:02.257,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 1.0
+25998,09:27:17.794,feed.reconnect,watchdog,feed.reconnect (stale 19s)
+26108,09:27:22.284,candle.closed,candle,NSE_INDEX|NIFTY O0 H0 L0 C0 V1
+26109,09:27:22.284,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 1.0
+26684,09:27:47.936,feed.reconnect,watchdog,feed.reconnect (stale 30s)
+26991,09:28:02.365,candle.closed,candle,NSE_INDEX|NIFTY O0 H0 L0 C0 V1
+26992,09:28:02.365,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 1.0
+27330,09:28:18.390,feed.reconnect,watchdog,feed.reconnect (stale 18s)
+27418,09:28:22.390,candle.closed,candle,NSE_INDEX|NIFTY O0 H0 L0 C0 V1
+27419,09:28:22.390,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 1.0
+27995,09:28:48.730,feed.reconnect,watchdog,feed.reconnect (stale 30s)
+28087,09:28:52.577,candle.closed,candle,NSE_INDEX|NIFTY O0 H0 L0 C0 V1
+28088,09:28:52.577,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 1.0
+28657,09:29:19.138,feed.reconnect,watchdog,feed.reconnect (stale 30s)
+28972,09:29:32.651,candle.closed,candle,NSE_INDEX|NIFTY O0 H0 L0 C0 V1
+28973,09:29:32.651,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 1.0
+29338,09:29:49.451,feed.reconnect,watchdog,feed.reconnect (stale 19s)
+29421,09:29:52.679,candle.closed,candle,NSE_INDEX|NIFTY O0 H0 L0 C0 V1
+29423,09:29:52.679,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 1.0
+1,10:55:42.906,connection.status,connection,none None
+78,10:55:50.051,connection.status,connection,upstox CONNECTING
+80,10:55:50.476,connection.status,connection,upstox CONNECTING
+263,10:55:58.996,connection.status,connection,upstox CONNECTED
+264,10:55:58.996,feed.reconnect,watchdog,feed.reconnect (broker switch → upstox)
+286,10:55:59.831,connection.status,connection,upstox None
+311,10:56:00.675,connection.status,connection,upstox None
+314,10:56:00.872,connection.status,connection,upstox None
+320,10:56:00.877,window.rebuilt,strike,NIFTY center 23400 (23 keys)
+4346,10:57:00.775,candle.closed,candle,NSE_INDEX|Nifty 50 O23419.8 H23423.9 L23418.6 C23420.3 V382
+4347,10:57:00.775,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 0.0
+8295,10:58:00.216,candle.closed,candle,NSE_INDEX|Nifty 50 O23421.3 H23423.3 L23416.5 C23418.2 V365
+8296,10:58:00.216,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 1.0
+12263,10:59:00.223,candle.closed,candle,NSE_INDEX|Nifty 50 O23419.7 H23419.7 L23415 C23415.5 V400
+12264,10:59:00.223,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 1.1
+16250,11:00:00.220,candle.closed,candle,NSE_INDEX|Nifty 50 O23417.4 H23417.5 L23412.5 C23415.5 V399
+16251,11:00:00.220,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 1.0
+17540,11:00:19.341,feed.reconnect,watchdog,feed.reconnect (index switch → BANKNIFTY)
+17557,11:00:19.693,connection.status,connection,upstox None
+17561,11:00:19.719,window.rebuilt,strike,BANKNIFTY center 56600 (23 keys)
+19330,11:00:47.129,feed.reconnect,watchdog,feed.reconnect (index switch → NIFTY)
+19335,11:00:47.470,connection.status,connection,upstox None
+19339,11:00:47.493,window.rebuilt,strike,NIFTY center 23400 (23 keys)
+20197,11:01:00.213,candle.closed,candle,NSE_INDEX|Nifty 50 O23416.2 H23418 L23416.2 C23417 V83
+20198,11:01:00.213,indicators.ready,indicator,rsi 50.0 atr 0.0 vol× 0.2

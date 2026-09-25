@@ -1,0 +1,90 @@
+2026-09-25 08:31:09 INFO    root: smoke-test ok
+2026-09-25 08:45:19 INFO    scapler.agents.connection: upstox: browser login opened; waiting for redirect on http://127.0.0.1:5000/upstox/callback
+2026-09-25 08:45:56 INFO    aiohttp.access: 127.0.0.1 [25/Sep/2026:08:45:56 +0530] "GET /upstox/callback?code=ENuzen&state=scapler HTTP/1.1" 200 356 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36 Edg/153.0.0.0"
+2026-09-25 08:47:04 INFO    scapler.agents.market_data: market_data REST sustained — re-opening streamer
+2026-09-25 08:48:11 INFO    scapler.agents.market_data: market_data REST sustained — re-opening streamer
+2026-09-25 08:49:18 INFO    scapler.agents.market_data: market_data REST sustained — re-opening streamer
+2026-09-25 08:50:24 INFO    scapler.agents.market_data: market_data REST sustained — re-opening streamer
+2026-09-25 08:51:31 INFO    scapler.agents.market_data: market_data REST sustained — re-opening streamer
+2026-09-25 08:52:38 INFO    scapler.agents.market_data: market_data REST sustained — re-opening streamer
+2026-09-25 08:53:44 INFO    scapler.agents.market_data: market_data REST sustained — re-opening streamer
+2026-09-25 08:54:51 INFO    scapler.agents.market_data: market_data REST sustained — re-opening streamer
+2026-09-25 08:55:57 INFO    scapler.agents.market_data: market_data REST sustained — re-opening streamer
+2026-09-25 08:57:04 INFO    scapler.agents.market_data: market_data REST sustained — re-opening streamer
+2026-09-25 08:58:11 INFO    scapler.agents.market_data: market_data REST sustained — re-opening streamer
+2026-09-25 08:59:46 INFO    scapler.agents.market_data: market_data REST sustained — re-opening streamer
+2026-09-25 09:12:08 INFO    scapler.agents.connection: upstox: browser login opened; waiting for redirect on http://127.0.0.1:5000/upstox/callback
+2026-09-25 09:14:23 ERROR   pywebview: Error occurred in script
+Traceback (most recent call last):
+  File "G:\My Drive\cline\Scapler\.venv\Lib\site-packages\webview\platforms\edgechromium.py", line 152, in evaluate_js
+    self.webview.Invoke(
+    ~~~~~~~~~~~~~~~~~~~^
+        Func[Object](
+        ^^^^^^^^^^^^^
+    ...<4 lines>...
+        )
+        ^
+    )
+    ^
+System.ObjectDisposedException: Cannot access a disposed object.
+Object name: 'WebView2'.
+   at System.Windows.Forms.Control.MarshaledInvoke(Control caller, Delegate method, Object[] args, Boolean synchronous)
+   at System.Windows.Forms.Control.Invoke(Delegate method, Object[] args)
+2026-09-25 09:14:51 INFO    scapler.agents.connection: upstox: browser login opened; waiting for redirect on http://127.0.0.1:5000/upstox/callback
+2026-09-25 09:14:56 INFO    aiohttp.access: 127.0.0.1 [25/Sep/2026:09:14:56 +0530] "GET /upstox/callback?code=sd1Fpj&state=scapler HTTP/1.1" 200 356 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36 Edg/153.0.0.0"
+2026-09-25 09:14:57 INFO    scapler.brokers.master_cache: master cache: loaded master-upstox-2026-09-25.json (6923 options) from disk
+2026-09-25 09:16:09 INFO    scapler.agents.connection: upstox: browser login opened; waiting for redirect on http://127.0.0.1:5000/upstox/callback
+2026-09-25 09:16:16 INFO    aiohttp.access: 127.0.0.1 [25/Sep/2026:09:16:16 +0530] "GET /upstox/callback?code=kP42W8&state=scapler HTTP/1.1" 200 356 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36 Edg/153.0.0.0"
+2026-09-25 09:16:16 INFO    scapler.brokers.master_cache: master cache: loaded master-upstox-2026-09-25.json (6923 options) from disk
+2026-09-25 09:16:45 ERROR   pywebview: Error occurred in script
+Traceback (most recent call last):
+  File "G:\My Drive\cline\Scapler\.venv\Lib\site-packages\webview\platforms\edgechromium.py", line 152, in evaluate_js
+    self.webview.Invoke(
+    ~~~~~~~~~~~~~~~~~~~^
+        Func[Object](
+        ^^^^^^^^^^^^^
+    ...<4 lines>...
+        )
+        ^
+    )
+    ^
+System.ObjectDisposedException: Cannot access a disposed object.
+Object name: 'WebView2'.
+   at System.Windows.Forms.Control.MarshaledInvoke(Control caller, Delegate method, Object[] args, Boolean synchronous)
+   at System.Windows.Forms.Control.Invoke(Delegate method, Object[] args)
+2026-09-25 09:16:46 ERROR   asyncio: Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x00000225B7259FD0>
+2026-09-25 09:17:37 WARNING pywebview: Port 51525 is in use
+2026-09-25 09:17:52 INFO    scapler.agents.connection: upstox: browser login opened; waiting for redirect on http://127.0.0.1:5000/upstox/callback
+2026-09-25 09:17:57 INFO    aiohttp.access: 127.0.0.1 [25/Sep/2026:09:17:57 +0530] "GET /upstox/callback?code=PNK1cK&state=scapler HTTP/1.1" 200 356 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36 Edg/153.0.0.0"
+2026-09-25 09:17:57 INFO    scapler.brokers.master_cache: master cache: loaded master-upstox-2026-09-25.json (6923 options) from disk
+2026-09-25 09:51:11 ERROR   pywebview: Error occurred in script
+Traceback (most recent call last):
+  File "G:\My Drive\cline\Scapler\.venv\Lib\site-packages\webview\platforms\edgechromium.py", line 152, in evaluate_js
+    self.webview.Invoke(
+    ~~~~~~~~~~~~~~~~~~~^
+        Func[Object](
+        ^^^^^^^^^^^^^
+    ...<4 lines>...
+        )
+        ^
+    )
+    ^
+System.ObjectDisposedException: Cannot access a disposed object.
+Object name: 'WebView2'.
+   at System.Windows.Forms.Control.MarshaledInvoke(Control caller, Delegate method, Object[] args, Boolean synchronous)
+   at System.Windows.Forms.Control.Invoke(Delegate method, Object[] args)
+2026-09-25 09:52:17 INFO    scapler.agents.connection: upstox: browser login opened; waiting for redirect on http://127.0.0.1:5000/upstox/callback
+2026-09-25 09:52:23 INFO    aiohttp.access: 127.0.0.1 [25/Sep/2026:09:52:23 +0530] "GET /upstox/callback?code=GSTj13&state=scapler HTTP/1.1" 200 356 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36 Edg/153.0.0.0"
+2026-09-25 09:52:23 INFO    scapler.brokers.master_cache: master cache: loaded master-upstox-2026-09-25.json (6923 options) from disk
+2026-09-25 13:09:56 WARNING scapler.brokers.upstox.feed_v3: upstox feed recv ended: no close frame received or sent
+2026-09-25 13:17:03 WARNING scapler.agents.market_data: market_data REST snapshot failed: 
+2026-09-25 13:17:03 ERROR   scapler.agents.market_data: market_data reconnect failed (53 keys): 
+2026-09-25 13:20:53 INFO    scapler.agents.connection: upstox: browser login opened; waiting for redirect on http://127.0.0.1:5000/upstox/callback
+2026-09-25 13:21:10 INFO    aiohttp.access: 127.0.0.1 [25/Sep/2026:13:21:10 +0530] "GET /upstox/callback?code=JWX7BU&state=scapler HTTP/1.1" 200 356 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36 Edg/153.0.0.0"
+2026-09-25 13:21:10 INFO    scapler.brokers.master_cache: master cache: loaded master-upstox-2026-09-25.json (6923 options) from disk
+2026-09-25 13:21:20 ERROR   scapler.agents.market_data: market_data reconnect failed (3 keys): timed out during opening handshake
+2026-09-25 13:50:30 WARNING scapler.brokers.upstox.feed_v3: upstox feed recv ended: no close frame received or sent
+2026-09-25 13:50:53 ERROR   scapler.agents.market_data: market_data reconnect failed (53 keys): timed out during opening handshake
+2026-09-25 13:51:44 INFO    scapler.agents.market_data: market_data REST sustained — re-opening streamer
+2026-09-25 13:51:54 ERROR   scapler.agents.market_data: market_data reconnect failed (53 keys): timed out during opening handshake
