@@ -16,10 +16,11 @@ class OrderAgent(Agent):
     name = "order"
     topics = (Topic.ORDER_APPROVED, Topic.TICK_RAW)
 
-    def __init__(self, bus, adapter, shadow: bool = False) -> None:
+    def __init__(self, bus, adapter, shadow: bool = False, shadow_slippage_ticks: int = 0) -> None:
         super().__init__(bus)
         self.adapter = adapter
         self.shadow = shadow          # SHADOW: no adapter call, real quotes
+        self.shadow_slippage_ticks = shadow_slippage_ticks
         self.ltp: dict[str, float] = {}
         self.quotes: dict[str, tuple[float, float]] = {}   # key → (bid, ask)
         self.open: dict[str, int] = {}
@@ -54,13 +55,16 @@ class OrderAgent(Agent):
             # SHADOW MODE (plan §12): decisions are real, the adapter edge is
             # stubbed — fill at the REAL prevailing quote (ask for buys, bid
             # for sells; LTP fallback when the feed carries no book).
+            # Optional slippage simulation for realism.
             from ..brokers.base import OrderAck
             bid, ask = self.quotes.get(key, (0.0, 0.0))
             ltp = self.ltp.get(key, 0.0)
+            tick_size = 0.05  # default index option tick size
+            slip = self.shadow_slippage_ticks * tick_size
             if req.intent is OrderIntent.BUY_TO_OPEN:
-                price = ask if ask > 0 else ltp
+                price = (ask if ask > 0 else ltp) + slip
             else:
-                price = bid if bid > 0 else ltp
+                price = (bid if bid > 0 else ltp) - slip
             ack = OrderAck(client_id=req.client_id,
                            broker_order_id=f"SHADOW-{req.client_id}",
                            status="SHADOW-FILLED")

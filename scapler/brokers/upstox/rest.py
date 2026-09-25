@@ -10,6 +10,7 @@ Endpoints (official v2/v3):
 """
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 from typing import Protocol
 from urllib.parse import quote
@@ -105,11 +106,16 @@ class UpstoxRest:
 
     # ── feed authorize (v3) ─────────────────────────────────────────
     async def authorize_feed_url(self) -> str:
-        status, body = await self._authed(
-            "GET", "/v3/feed/market-data-feed/authorize")
-        if status != 200:
+        for attempt in range(3):
+            status, body = await self._authed(
+                "GET", "/v3/feed/market-data-feed/authorize")
+            if status == 200:
+                return orjson.loads(body)["data"]["authorized_redirect_uri"]
+            if status == 429:
+                await asyncio.sleep(2 ** attempt)
+                continue
             raise RuntimeError(f"upstox feed authorize failed: {status}")
-        return orjson.loads(body)["data"]["authorized_redirect_uri"]
+        raise RuntimeError("upstox feed authorize: max retries exceeded")
 
     # ── instrument master ───────────────────────────────────────────
     async def master_bytes(self) -> tuple[dict[str, bytes], str]:

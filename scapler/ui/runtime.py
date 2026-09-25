@@ -286,7 +286,7 @@ class ScaplerRuntime:
         # the entry window (DEMO only; live mode uses real IST)
         self.rk = RiskAgent(bus, c,
                             clock_fn=(lambda: "10:30") if self.demo else None)
-        self.oa = OrderAgent(bus, self.broker, shadow=c.shadow)
+        self.oa = OrderAgent(bus, self.broker, shadow=c.shadow, shadow_slippage_ticks=0)
         self.px = PositionExitAgent(bus, c)
         self.conn = ConnectionAgent(bus, c, self.store)
         self.jr = JournalAgent(bus, self.data_dir / "journal.sqlite",
